@@ -176,6 +176,7 @@ namespace sge {
             for (auto layer : m_validationLayers)
                 std::cout << "Used validation level: " << layer << std::endl;
         } else {
+            std::cout << "Vulkan started without validation levels\n";
             createInfo.enabledLayerCount = 0;
         }
         auto result = vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device);
@@ -243,9 +244,11 @@ namespace sge {
             << VK_API_VERSION_MINOR(impl_support) << "." 
             << VK_API_VERSION_PATCH(impl_support) << std::endl;
 
-        assert(m_enableValidationLayers && checkValidationLayerSupport() ||
-               !m_enableValidationLayers &&
-               "Validation layers requested, but not available!");
+        if (m_enableValidationLayers && !checkValidationLayerSupport())
+        {
+            std::cout << "Validation layers requested, but not available!\nVulkan api will not use any validation layers!\n\n";
+            m_enableValidationLayers = false;
+        }
 
         VkApplicationInfo appInfo{};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
