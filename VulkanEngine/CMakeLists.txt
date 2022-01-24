@@ -11,6 +11,7 @@ set(CORE_INCLUDES
 	includes/Pipeline.h
 	includes/SwapChain.h
 	includes/Window.h
+	includes/Model.h
 )
 set(CORE_SOURCES
 	sources/App.cpp
@@ -19,6 +20,7 @@ set(CORE_SOURCES
 	sources/Pipeline.cpp
 	sources/SwapChain.cpp
 	sources/Window.cpp
+	sources/Model.cpp
 )
 add_executable(${CORE_PROJECT_NAME}
 	${CORE_INCLUDES}

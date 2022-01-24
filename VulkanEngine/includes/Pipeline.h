@@ -1,4 +1,4 @@
-#pragma once
+ #pragma once
 #include "Device.h"
 #include <string>
 namespace sge {

@@ -5,6 +5,7 @@
 namespace sge {
     App::App()
     {
+        loadModels();
         createPipeLineLayout();
         createPipeline();
         createCommandBuffers();
@@ -64,7 +65,9 @@ namespace sge {
 
             vkCmdBeginRenderPass(m_commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
             m_pipeline->bind(m_commandBuffers[i]);
-            vkCmdDraw(m_commandBuffers[i], 3, 1, 0, 0);
+            //vkCmdDraw(m_commandBuffers[i], 3, 1, 0, 0);
+            m_model->bind(m_commandBuffers[i]);
+            m_model->draw(m_commandBuffers[i]);
             vkCmdEndRenderPass(m_commandBuffers[i]);
             auto result = vkEndCommandBuffer(m_commandBuffers[i]);
             assert(result == VK_SUCCESS && "failed to record command buffer");
@@ -77,6 +80,20 @@ namespace sge {
 
         result = m_swapChain.submitCommandBuffers(&m_commandBuffers[imageIndex], &imageIndex);
         assert(result == VK_SUCCESS && "failed to present swap chain image");
+    }
+
+    void App::loadModels()
+    {
+        std::vector<Model::Vertex> vertices
+        {
+            {glm::vec2( 1.0f,  1.0f)},
+            {glm::vec2( 0.0f,  0.0f)},
+            {glm::vec2( 1.0f,  0.0f)},
+            {glm::vec2(-1.0f, -1.0f)},
+            {glm::vec2( 0.0f,  0.0f)},
+            {glm::vec2(-1.0f,  0.0f)}
+        };
+        m_model = std::make_unique<Model>(m_device, vertices);
     }
 
     void App::createPipeline() {

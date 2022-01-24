@@ -397,6 +397,33 @@ namespace sge {
         assert(result == VK_SUCCESS && "failed to bind image memory!");
     }
 
+    void Device::createBuffer(
+        VkDeviceSize size,
+        VkBufferUsageFlags usage,
+        VkMemoryPropertyFlags properties,
+        VkBuffer& buffer,
+        VkDeviceMemory& bufferMemory)
+    {
+        VkBufferCreateInfo bufferInfo{};
+        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.size = size;
+        bufferInfo.usage = usage;
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        auto result = vkCreateBuffer(m_device, &bufferInfo, nullptr, &buffer);
+        assert(result == VK_SUCCESS && "Failed to create vertex buffer");
+
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(m_device, buffer, &memRequirements);
+        
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+        result = vkAllocateMemory(m_device, &allocInfo, nullptr, &bufferMemory);
+        assert(result == VK_SUCCESS && "Failed to allocate vertex buffer memory");
+        vkBindBufferMemory(m_device, buffer, bufferMemory, 0);
+    }
+
     void Device::setupDebugMessenger() {
         if (!m_enableValidationLayers) return;
         VkDebugUtilsMessengerCreateInfoEXT createInfo{};

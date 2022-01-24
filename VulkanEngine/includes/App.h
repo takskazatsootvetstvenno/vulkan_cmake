@@ -3,6 +3,7 @@
 #include "Device.h"
 #include "SwapChain.h"
 #include "Pipeline.h"
+#include "model.h"
 #include <memory>
 namespace sge {
     class App {
@@ -14,6 +15,7 @@ namespace sge {
 
         void run();
     private:
+        void loadModels();
         void createPipeline();
         void createCommandBuffers();
         void createPipeLineLayout();
@@ -24,6 +26,7 @@ namespace sge {
         VkPipelineLayout m_pipelineLayout;
         std::unique_ptr<Pipeline> m_pipeline;
         std::vector<VkCommandBuffer> m_commandBuffers;
+        std::unique_ptr<Model> m_model;
     };
 
 }  // namespace sge
