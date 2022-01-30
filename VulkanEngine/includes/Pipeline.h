@@ -4,6 +4,11 @@
 namespace sge {
 	struct PipelineConfigInfo {
 		PipelineConfigInfo() = default;
+        PipelineConfigInfo(const PipelineConfigInfo&) = delete;
+        PipelineConfigInfo& operator=(const PipelineConfigInfo&) = delete;
+        PipelineConfigInfo(PipelineConfigInfo&&) = default;
+        PipelineConfigInfo& operator=(PipelineConfigInfo&&) = default;
+
         VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo;
         VkPipelineRasterizationStateCreateInfo rasterizationInfo;
         VkPipelineMultisampleStateCreateInfo multisampleInfo;
@@ -18,19 +23,18 @@ namespace sge {
 	class Pipeline
 	{
     public:
-        Pipeline(Device& device, const std::string vertFilePath, const std::string fragFilePath, const PipelineConfigInfo& configInfo);
-        std::string readFile(const std::string& filepath);
-        void crateGraphicsPipeline(const std::string& vertFilePath, const std::string& fragFilePath, const PipelineConfigInfo& configInfo);
-
-        void bind(VkCommandBuffer commandBuffer);
-
-        static PipelineConfigInfo createDefaultPipeline(uint32_t width, uint32_t height);
-        VkShaderModule createShaderModule(const std::string& code);
-        ~Pipeline();
+        Pipeline(Device& device, const std::string_view vertFilePath, const std::string_view fragFilePath, const PipelineConfigInfo& configInfo);
         Pipeline(const Pipeline&) = delete;
         Pipeline& operator=(const Pipeline&) = delete;
         Pipeline(Pipeline&&) = delete;
         Pipeline& operator=(Pipeline&&) = delete;
+        ~Pipeline();
+
+        std::string readFile(const std::string_view filepath);
+        void crateGraphicsPipeline(const std::string_view vertFilePath, const std::string_view fragFilePath, const PipelineConfigInfo& configInfo);
+        void bind(VkCommandBuffer commandBuffer) const noexcept;
+        static PipelineConfigInfo createDefaultPipeline(uint32_t width, uint32_t height);
+        VkShaderModule createShaderModule(const std::string& code);
     private:
         Device& m_device;
         VkPipeline m_graphicsPipeline;

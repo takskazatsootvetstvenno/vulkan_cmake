@@ -19,14 +19,17 @@ namespace sge {
         void createPipeline();
         void createCommandBuffers();
         void createPipeLineLayout();
-        void drawFrame();
+        void drawFrame() noexcept;
+        void recreateSwapChain() noexcept;
+        void recordCommandBuffer(const int imageIndex);
+
         Window m_window{800, 600, "vulkan_window"};
         Device m_device{m_window};
-        SwapChain m_swapChain{m_device, m_window.getExtent()};
+        std::unique_ptr<SwapChain> m_swapChain;
         VkPipelineLayout m_pipelineLayout;
         std::unique_ptr<Pipeline> m_pipeline;
         std::vector<VkCommandBuffer> m_commandBuffers;
         std::unique_ptr<Model> m_model;
     };
 
-}  // namespace sge
+} 

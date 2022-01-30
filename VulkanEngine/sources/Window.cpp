@@ -1,8 +1,9 @@
 #include "Window.h"
 #include "GLFW/glfw3.h"
+#include <iostream>
 #include <cassert>
 namespace sge {
-    Window::Window(int width, int height, std::string name)
+    Window::Window(int width, int height, std::string name) noexcept
         : m_width(width), m_height(height), m_windowName(name) {
         init();
     }
@@ -10,24 +11,54 @@ namespace sge {
         glfwDestroyWindow(m_pWindow);
         glfwTerminate();
     }
-    bool Window::shouldClose() { 
+    bool Window::shouldClose() noexcept
+    {
         return glfwWindowShouldClose(m_pWindow); 
     }
-    VkExtent2D Window::getExtent() {
+    bool Window::framebufferResized() const noexcept
+    {
+        return m_framebufferResized;
+    }
+    void Window::resetWindowResizeFlag() noexcept
+    {
+        m_framebufferResized = false;
+    }
+     VkExtent2D Window::getExtent() const noexcept
+    {
         return {static_cast<uint32_t>(m_width), static_cast<uint32_t>(m_height)};
     }
-    void Window::createWindowSurface(VkInstance instance, VkSurfaceKHR* surface) 
+    void Window::createWindowSurface(VkInstance instance, VkSurfaceKHR* surface) noexcept
     {
         auto result = glfwCreateWindowSurface(instance, m_pWindow, nullptr, surface);
-        assert(result == VK_SUCCESS && "failed to create window surface");
+        if (result != VK_SUCCESS)
+        {
+            std::cout << "Failed to create window surface!";
+            assert(false && "failed to create window surface");
+        }
     }
-    void Window::init() { 
+    /*static*/ void Window::frameResizeCallback(GLFWwindow* window, int width, int height) noexcept
+    {
+        auto resizedWindow = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+        resizedWindow->m_framebufferResized = true;
+        resizedWindow->m_width = width;
+        resizedWindow->m_height = height;
+    }
+    void Window::init() noexcept {
         int initGLFW = glfwInit();
-        assert(GLFW_TRUE == initGLFW && "Can't init GLFW!");
-        
+        if (initGLFW != GLFW_TRUE)
+        {
+            std::cout << "Can't init GLFW!";
+            assert(false && "Can't init GLFW!");
+        }        
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
         m_pWindow = glfwCreateWindow(m_width, m_height, m_windowName.c_str(), nullptr, nullptr);
-        assert(nullptr != m_pWindow && "Can't create GLFW window!");
+        glfwSetWindowUserPointer(m_pWindow, this);
+        glfwSetFramebufferSizeCallback(m_pWindow, frameResizeCallback);
+        if (m_pWindow == nullptr)
+        {
+            std::cout << "Can't create GLFW window!";
+            assert(false && "Can't create GLFW window!");
+        }
     }
 }  // namespace sge

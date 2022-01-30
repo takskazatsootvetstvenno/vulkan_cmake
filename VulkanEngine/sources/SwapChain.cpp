@@ -1,3 +1,4 @@
+
 #include "SwapChain.h"
 #include <iostream>
 #include <algorithm>
@@ -26,7 +27,7 @@ namespace sge {
             m_swapChain = nullptr;
         }
 
-        for (int i = 0; i < m_depthImages.size(); i++) {
+        for (int i = 0; i < m_depthImages.size(); ++i) {
             vkDestroyImageView(m_device.device(), m_depthImageViews[i], nullptr);
             vkDestroyImage(m_device.device(), m_depthImages[i], nullptr);
             vkFreeMemory(m_device.device(), m_depthImageMemorys[i], nullptr);
@@ -38,11 +39,39 @@ namespace sge {
 
         vkDestroyRenderPass(m_device.device(), m_renderPass, nullptr);
 
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            vkDestroySemaphore(m_device.device(), renderFinishedSemaphores[i], nullptr);
-            vkDestroySemaphore(m_device.device(), imageAvailableSemaphores[i], nullptr);
-            vkDestroyFence(m_device.device(), inFlightFences[i], nullptr);
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+            vkDestroySemaphore(m_device.device(), m_renderFinishedSemaphores[i], nullptr);
+            vkDestroySemaphore(m_device.device(), m_imageAvailableSemaphores[i], nullptr);
+            vkDestroyFence(m_device.device(), m_inFlightFences[i], nullptr);
         }
+    }
+    uint32_t SwapChain::width() const noexcept
+    {
+       return m_swapChainExtent.width; 
+    }
+    uint32_t SwapChain::height() const noexcept
+    {
+         return m_swapChainExtent.height;
+    }
+    VkFormat SwapChain::getSwapChainImageFormat() const noexcept
+    {
+        return m_swapChainImageFormat;
+    }
+    VkFramebuffer SwapChain::getFrameBuffer(int index) const noexcept
+    {
+        return m_swapChainFramebuffers[index];
+    }
+    VkRenderPass SwapChain::getRenderPass() const noexcept
+    {
+        return m_renderPass;
+    }
+    uint32_t SwapChain::imageCount() const noexcept
+    {
+        return static_cast<uint32_t>(m_swapChainImages.size());
+    }
+    VkExtent2D SwapChain::getSwapChainExtent() const noexcept
+    {
+        return m_swapChainExtent;
     }
     VkSurfaceFormatKHR SwapChain::chooseSwapSurfaceFormat(
         const std::vector<VkSurfaceFormatKHR>& availableFormats) {
@@ -56,31 +85,24 @@ namespace sge {
     }
     VkPresentModeKHR SwapChain::chooseSwapPresentMode(
      const std::vector<VkPresentModeKHR>& availablePresentModes) {
-     /*
-        for (const auto &availablePresentMode : availablePresentModes) {
-       if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-         std::cout << "Present mode: Mailbox" << std::endl;
-         return availablePresentMode;
-       }
-     }*/
-        
-    for (const auto& availablePresentMode : availablePresentModes) {
-        if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+    for (const auto &availablePresentMode : availablePresentModes)
+        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR){
+            std::cout << "Present mode: Mailbox" << std::endl;
+            return availablePresentMode;
+        }
+    
+    for (const auto& availablePresentMode : availablePresentModes)
+        if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR){
             std::cout << "Present mode: Immediate" << std::endl;
             return availablePresentMode;
         }
-    }
-
+    
      std::cout << "Present mode: V-Sync" << std::endl;
      return VK_PRESENT_MODE_FIFO_KHR;
     }
     void SwapChain::createSyncObjects()
     {
-        imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-        renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-        inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-        imagesInFlight.resize(imageCount(), VK_NULL_HANDLE);
-
+        m_imagesInFlight.resize(imageCount(), VK_NULL_HANDLE);
         VkSemaphoreCreateInfo semaphoreInfo = {};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -89,9 +111,9 @@ namespace sge {
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            if (vkCreateSemaphore(m_device.device(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-                vkCreateSemaphore(m_device.device(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
-                vkCreateFence(m_device.device(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS
+            if (vkCreateSemaphore(m_device.device(), &semaphoreInfo, nullptr, &m_imageAvailableSemaphores[i]) != VK_SUCCESS ||
+                vkCreateSemaphore(m_device.device(), &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]) != VK_SUCCESS ||
+                vkCreateFence(m_device.device(), &fenceInfo, nullptr, &m_inFlightFences[i]) != VK_SUCCESS
                 ) 
             {
                 assert(false && "failed to create synchronization objects for a frame!");
@@ -144,8 +166,8 @@ namespace sge {
             createInfo.pQueueFamilyIndices = queueFamilyIndices;
         } else {
             createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            createInfo.queueFamilyIndexCount = 0;      // Optional
-            createInfo.pQueueFamilyIndices = nullptr;  // Optional
+            createInfo.queueFamilyIndexCount = 0;
+            createInfo.pQueueFamilyIndices = nullptr;
         }
         createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
         createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -237,35 +259,35 @@ namespace sge {
             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
     }
 
-    VkResult SwapChain::acquireNextImage(uint32_t* imageIndex) {
-        vkWaitForFences(
+    VkResult SwapChain::acquireNextImage(uint32_t* imageIndex) const noexcept{
+        vkWaitForFences(                               //Ждём, когда ВСЕ ранее записанные команды в командном буффере исполнятся.
             m_device.device(),
             1,
-            &inFlightFences[m_currentFrame],
+            &m_inFlightFences[m_currentFrame],
             VK_TRUE,
             std::numeric_limits<uint64_t>::max());
         
-        VkResult result = vkAcquireNextImageKHR(
+        VkResult result = vkAcquireNextImageKHR(       //запрос изображения из swapChain для дальнейшего рендера
             m_device.device(),
             m_swapChain,
             std::numeric_limits<uint64_t>::max(),
-            imageAvailableSemaphores[m_currentFrame],  // must be a not signaled semaphore
+            m_imageAvailableSemaphores[m_currentFrame],  //как только изображение считается из presentEngine, взведётся этот семофор в GPU
             VK_NULL_HANDLE,
             imageIndex);
 
         return result;
     }
-    VkResult SwapChain::submitCommandBuffers(
-        const VkCommandBuffer* buffers, uint32_t* imageIndex) {
-        if (imagesInFlight[*imageIndex] != VK_NULL_HANDLE) {
-            vkWaitForFences(m_device.device(), 1, &imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
+    VkResult SwapChain::submitCommandBuffers (
+        const VkCommandBuffer* buffers, uint32_t* imageIndex) noexcept {
+        if (m_imagesInFlight[*imageIndex] != VK_NULL_HANDLE) {
+            vkWaitForFences(m_device.device(), 1, &m_imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
         }
-        imagesInFlight[*imageIndex] = inFlightFences[m_currentFrame];
+        m_imagesInFlight[*imageIndex] = m_inFlightFences[m_currentFrame];
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-        VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[m_currentFrame] };
-        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        
+        VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
+        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };                  // указываем, на какую стадию впихнуть семофор, все стадии до этой - без блокировки в GPU
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphores;
         submitInfo.pWaitDstStageMask = waitStages;
@@ -273,14 +295,14 @@ namespace sge {
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = buffers;
 
-        VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[m_currentFrame] };
+        VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[m_currentFrame] };
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        vkResetFences(m_device.device(), 1, &inFlightFences[m_currentFrame]);
-        auto result = vkQueueSubmit(m_device.graphicsQueue(), 1, &submitInfo, inFlightFences[m_currentFrame]);  //command buffer sended
-        assert(result == VK_SUCCESS && "failed to submit draw command buffer!");
-        VkPresentInfoKHR presentInfo = {};
+        vkResetFences(m_device.device(), 1, &m_inFlightFences[m_currentFrame]);                                 //Сброс fence
+        auto result = vkQueueSubmit(m_device.graphicsQueue(), 1, &submitInfo, m_inFlightFences[m_currentFrame]);//Отправляем командный буффер, причём в waitStages будет стоять семофор ожидающий
+        assert(result == VK_SUCCESS && "failed to submit draw command buffer!");                                //конца чтения изображения из presentEngine(сигнал конца vkAcquireNextImageKHR даёт в виде семофора),
+        VkPresentInfoKHR presentInfo = {};                                                                      //а после того как все команды буффера исполнятся будет взведён fence, означающий, что буффер пуст
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
         presentInfo.waitSemaphoreCount = 1;
@@ -292,9 +314,9 @@ namespace sge {
 
         presentInfo.pImageIndices = imageIndex;
 
-        result = vkQueuePresentKHR(m_device.presentQueue(), &presentInfo);                                      //present in swapchain
-
-        m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+        result = vkQueuePresentKHR(m_device.presentQueue(), &presentInfo);                                      //Отправляем изображение в очередь представления, причём очередь представления будет дожидаться
+                                                                                                                //завершение выполнения командного буффера (всех команд, что попали в вызов vkQueueSubmit)
+        m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;                                           
         return result;
     }
     void SwapChain::createRenderPass() {
@@ -331,18 +353,19 @@ namespace sge {
         subpass.colorAttachmentCount = 1;
         subpass.pColorAttachments = &colorAttachmentRef;
         subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
+        
         VkSubpassDependency dependency = {};
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.srcAccessMask = 0;
-        dependency.srcStageMask =
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.dstSubpass = 0;
-        dependency.dstStageMask =
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.dstAccessMask =
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
+        {                                                   //External --> subpass 0
+            dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+            dependency.dstSubpass = 0;
+            dependency.srcStageMask =
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+            dependency.dstStageMask =
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+            dependency.srcAccessMask = 0;
+            dependency.dstAccessMask =
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        }
         std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
         VkRenderPassCreateInfo renderPassInfo = {};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -380,4 +403,4 @@ namespace sge {
             assert(result == VK_SUCCESS && "failed to create framebuffer!");
         }
     }
-}  // namespace sge
+}

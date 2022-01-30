@@ -1,40 +1,45 @@
 #pragma once
-#include <vulkan/vulkan.h>
+#include "volk.h"
 #include "Device.h"
+#include <array>
 namespace sge {
     class SwapChain {
     public:
         static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
         SwapChain(Device& deviceRef, VkExtent2D windowExtent);
+        SwapChain(const SwapChain&) = delete;
+        SwapChain& operator=(const SwapChain&) = delete;
         ~SwapChain();
 
-        SwapChain(const SwapChain&) = delete;
-        void operator=(const SwapChain&) = delete;
-        uint32_t width() { return m_swapChainExtent.width; }
-        uint32_t height() { return m_swapChainExtent.height; }
-        VkFormat getSwapChainImageFormat() { return m_swapChainImageFormat; }
-        VkFramebuffer getFrameBuffer(int index) { return m_swapChainFramebuffers[index]; }
-        VkRenderPass getRenderPass() { return m_renderPass; }
-        uint32_t imageCount() { return static_cast<uint32_t>(m_swapChainImages.size()); }
-        VkExtent2D getSwapChainExtent() { return m_swapChainExtent; }
-        VkResult acquireNextImage(uint32_t* imageIndex);
-        VkResult submitCommandBuffers(const VkCommandBuffer* buffers, uint32_t* imageIndex);
+        uint32_t width() const noexcept;
+        uint32_t height() const noexcept;
+        VkFormat getSwapChainImageFormat() const noexcept;
+        VkFramebuffer getFrameBuffer(int index) const noexcept;
+        VkRenderPass getRenderPass() const noexcept;
+        uint32_t imageCount() const noexcept;
+        VkExtent2D getSwapChainExtent() const noexcept;
+        VkResult acquireNextImage(uint32_t* imageIndex) const noexcept;
+        VkResult submitCommandBuffers(const VkCommandBuffer* buffers, uint32_t* imageIndex) noexcept;
     private:
         void createSwapChain();
         void createImageViews();
-        void createDepthResources();
-        VkFormat findDepthFormat();
-       
         void createRenderPass();
+        void createDepthResources();
         void createFramebuffers();
+        void createSyncObjects();
 
         VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
         VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-        void createSyncObjects();
         VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+        VkFormat findDepthFormat();
+
         Device& m_device;
-        VkExtent2D m_windowExtent;
         VkSwapchainKHR m_swapChain;
+        VkRenderPass m_renderPass;
+        VkExtent2D m_windowExtent;
+        VkExtent2D m_swapChainExtent;
+        VkFormat m_swapChainImageFormat;
+        
         std::vector<VkImage> m_swapChainImages;
         std::vector<VkImageView> m_swapChainImageViews;
         std::vector<VkFramebuffer> m_swapChainFramebuffers;
@@ -43,14 +48,10 @@ namespace sge {
         std::vector<VkDeviceMemory> m_depthImageMemorys;
         std::vector<VkImageView> m_depthImageViews;
 
-        VkRenderPass m_renderPass;
-        VkFormat m_swapChainImageFormat;
-        VkExtent2D m_swapChainExtent;
-
-        std::vector<VkSemaphore> imageAvailableSemaphores;
-        std::vector<VkSemaphore> renderFinishedSemaphores;
-        std::vector<VkFence> inFlightFences;
-        std::vector<VkFence> imagesInFlight;
+        std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> m_imageAvailableSemaphores;
+        std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> m_renderFinishedSemaphores;
+        std::array<VkFence, MAX_FRAMES_IN_FLIGHT> m_inFlightFences;
+        std::vector<VkFence> m_imagesInFlight;
         size_t m_currentFrame = 0;
     };
 }  // namespace sge

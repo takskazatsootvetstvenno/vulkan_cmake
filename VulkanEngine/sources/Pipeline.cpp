@@ -2,20 +2,23 @@
 #include "model.h"
 
 #include <fstream>
+#include <iostream>
 #include <cassert>
 namespace sge {
 
-	Pipeline::Pipeline(Device& device, const std::string vertFilePath, const std::string fragFilePath, const PipelineConfigInfo& configInfo)
-		:m_device(device)
-	{
+	Pipeline::Pipeline(Device& device, const std::string_view vertFilePath, const std::string_view fragFilePath, const PipelineConfigInfo& configInfo)
+		:m_device(device) {
 		crateGraphicsPipeline(vertFilePath, fragFilePath, configInfo);
-		
 	}
-	std::string Pipeline::readFile(const std::string& filepath)
-	{
-		std::ifstream file(filepath, std::ios::ate | std::ios::binary);
-		assert(file.is_open() && "failed to open file!");
 
+	std::string Pipeline::readFile(const std::string_view filepath)
+	{
+		std::ifstream file(filepath.data(), std::ios::ate | std::ios::binary);
+		if (file.is_open() == false)
+		{
+			std::cout << "Failed to open file: " << filepath << "!\n";
+			assert(false && "Failed to open file!");
+		}
 		size_t fileSize = static_cast<size_t>(file.tellg());
 		std::string buffer; buffer.resize(fileSize);
 		file.seekg(0);
@@ -23,7 +26,8 @@ namespace sge {
 		file.close();
 		return buffer;
 	}
-	void Pipeline::crateGraphicsPipeline(const std::string& vertFilePath, const std::string& fragFilePath, const PipelineConfigInfo& configInfo)
+
+	void Pipeline::crateGraphicsPipeline(const std::string_view vertFilePath, const std::string_view fragFilePath, const PipelineConfigInfo& configInfo)
 	{
 		assert(configInfo.pipelineLayout != VK_NULL_HANDLE && "Cannot create graphics pipeline: no pipelineLauout provided in configInfo");
 		assert(configInfo.renderPass != VK_NULL_HANDLE && "Cannot create graphics pipeline: no renderPass provided in configInfo");
@@ -126,7 +130,7 @@ namespace sge {
 		vkDestroyShaderModule(m_device.device(), fragShaderModule, nullptr);
 	}
 
-	void Pipeline::bind(VkCommandBuffer commandBuffer) {
+	void Pipeline::bind(VkCommandBuffer commandBuffer) const noexcept{
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
 	}
 
@@ -137,7 +141,7 @@ namespace sge {
 		configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		configInfo.inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
 
-		configInfo.viewport.x = 0.f;								//viepwport - image scale, scissor - cut only
+		configInfo.viewport.x = 0.f;
 		configInfo.viewport.y = 0.f;
 		configInfo.viewport.width = static_cast<float>(width);
 		configInfo.viewport.height = static_cast<float>(height);
@@ -153,7 +157,7 @@ namespace sge {
 		configInfo.rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
 		configInfo.rasterizationInfo.lineWidth = 1.0f;
 		configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-		configInfo.rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		configInfo.rasterizationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; //VK_FRONT_FACE_CLOCKWISE;
 		configInfo.rasterizationInfo.depthBiasEnable = VK_FALSE;
 		configInfo.rasterizationInfo.depthBiasConstantFactor = 0.f;
 		configInfo.rasterizationInfo.depthBiasClamp = 0.f;

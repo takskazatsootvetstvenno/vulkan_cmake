@@ -5,14 +5,14 @@ namespace sge {
 		vkDestroyBuffer(m_device.device(), m_vertexBuffer, nullptr);
 		vkFreeMemory(m_device.device(), m_vertexBefferMemory, nullptr);
 	}
-	void Model::bind(VkCommandBuffer commandBuffer)
+	void Model::bind(VkCommandBuffer commandBuffer) const noexcept
 	{
 		VkBuffer buffers[] = { m_vertexBuffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
 	}
 
-	void Model::draw(VkCommandBuffer commandBuffer)
+	void Model::draw(VkCommandBuffer commandBuffer) const noexcept
 	{
 		vkCmdDraw(commandBuffer, m_vertexCount, 1, 0, 0);
 	}
@@ -29,7 +29,7 @@ namespace sge {
 			m_vertexBuffer,
 			m_vertexBefferMemory);
 		void* data;
-		vkMapMemory(m_device.device(), m_vertexBefferMemory, 0, bufferSize, 0, &data);
+		vkMapMemory(m_device.device(), m_vertexBefferMemory, 0, bufferSize, 0, &data);		
 		memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
 		vkUnmapMemory(m_device.device(), m_vertexBefferMemory);
 	}
