@@ -24,7 +24,7 @@ cd vulkan_cmake
  
 ./WidnowsDebug.cmd or ./WindowsRelease.cmd 
  
-in test_dir you will found build and install directory
+in test_dir you will find the build and install directory
 # Used materials/libs
  
 Used materials from https://vulkan-tutorial.com/

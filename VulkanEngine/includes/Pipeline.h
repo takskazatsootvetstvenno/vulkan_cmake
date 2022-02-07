@@ -9,12 +9,16 @@ namespace sge {
         PipelineConfigInfo(PipelineConfigInfo&&) = default;
         PipelineConfigInfo& operator=(PipelineConfigInfo&&) = default;
 
+        VkPipelineViewportStateCreateInfo viewportInfo;
         VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo;
         VkPipelineRasterizationStateCreateInfo rasterizationInfo;
         VkPipelineMultisampleStateCreateInfo multisampleInfo;
         VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
+        //VkPipelineDynamicStateCreateInfo dynamicStateInfo;
+        //std::vector<VkDynamicState> dynamicStateEnables;
         VkPipelineLayout pipelineLayout = nullptr;
         VkRenderPass renderPass = nullptr;
+        
 		VkViewport viewport;
 		VkRect2D scissor;
         uint32_t subpass = 0;

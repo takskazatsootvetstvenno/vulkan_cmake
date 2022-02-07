@@ -5,7 +5,7 @@
 namespace sge {
     class SwapChain {
     public:
-        static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+        static constexpr int MAX_FRAMES_IN_FLIGHT = 3;
         SwapChain(Device& deviceRef, VkExtent2D windowExtent);
         SwapChain(const SwapChain&) = delete;
         SwapChain& operator=(const SwapChain&) = delete;

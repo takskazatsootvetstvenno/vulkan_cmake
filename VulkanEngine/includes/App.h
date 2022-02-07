@@ -18,6 +18,7 @@ namespace sge {
         void loadModels();
         void createPipeline();
         void createCommandBuffers();
+        void freeCommandBuffers();
         void createPipeLineLayout();
         void drawFrame() noexcept;
         void recreateSwapChain() noexcept;

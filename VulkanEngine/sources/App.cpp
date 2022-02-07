@@ -1,10 +1,19 @@
 #include <iostream>
 #include <array>
 
+
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+
 #include "App.h"
 #include "glm/glm.hpp"
 #include "GLFW/glfw3.h"
 namespace sge {
+    struct SimplePushConstantData {
+        alignas(16) glm::vec2 offset;
+        alignas(16) glm::vec3 color;
+    };
     App::App()
     {
         loadModels();
@@ -27,12 +36,17 @@ namespace sge {
     }
 
     void App::createPipeLineLayout() {
+        VkPushConstantRange pushConstantRange{};
+        pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+        pushConstantRange.offset = 0;
+        pushConstantRange.size = sizeof(SimplePushConstantData);
+
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = 0;
         pipelineLayoutInfo.pSetLayouts = nullptr;
-        pipelineLayoutInfo.pushConstantRangeCount = 0;
-        pipelineLayoutInfo.pPushConstantRanges = nullptr;
+        pipelineLayoutInfo.pushConstantRangeCount = 1;
+        pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
         auto result = vkCreatePipelineLayout(m_device.device(), &pipelineLayoutInfo, nullptr,
             &m_pipelineLayout);
         assert(result == VK_SUCCESS && "failed to create pipeline layout!");
@@ -48,7 +62,7 @@ namespace sge {
         vkDeviceWaitIdle(m_device.device());
         m_swapChain = nullptr;
         m_swapChain = std::make_unique<SwapChain>(m_device, extent);
-        std::cout << "New SwapChain has created!\n";
+        std::cout << "New SwapChain has been created!\n";
         createPipeline();
     }
 
@@ -87,7 +101,20 @@ namespace sge {
         vkCmdBeginRenderPass(m_commandBuffers[imageIndex], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         m_pipeline->bind(m_commandBuffers[imageIndex]);
         m_model->bind(m_commandBuffers[imageIndex]);
-        m_model->draw(m_commandBuffers[imageIndex]);
+        for (int j = 0; j < 4; j++)
+        {
+            SimplePushConstantData push{};
+            push.offset = { 0.f, -0.5f + j * 0.25f };
+            push.color = { 0.f, 0.f, 0.2f + 0.2f * j };
+            vkCmdPushConstants(
+                m_commandBuffers[imageIndex],
+                m_pipelineLayout,
+                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                0,
+                sizeof(SimplePushConstantData),
+                &push);
+            m_model->draw(m_commandBuffers[imageIndex]);
+        }
         vkCmdEndRenderPass(m_commandBuffers[imageIndex]);
         result = vkEndCommandBuffer(m_commandBuffers[imageIndex]);
         assert(result == VK_SUCCESS && "failed to record command buffer");
@@ -136,6 +163,6 @@ namespace sge {
             "Shaders/vertex.vert.spv",
             "Shaders/fragment.frag.spv",
             pipeline_config);
-        std::cout << "New Pipeline has created!\n";
+        std::cout << "New Pipeline has been created!\n";
     }
 }  // namespace sge

@@ -284,7 +284,7 @@ namespace sge {
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = "Simplest engine";
         appInfo.pNext = nullptr;
-        appInfo.apiVersion = VK_MAKE_VERSION(1, 0, 0);
+        appInfo.apiVersion = VK_MAKE_VERSION(1, 2, 194);
 
         std::cout << "Requested vulkan version: "
             << VK_API_VERSION_MAJOR(appInfo.apiVersion) << "."

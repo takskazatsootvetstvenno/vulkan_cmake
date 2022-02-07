@@ -260,14 +260,14 @@ namespace sge {
     }
 
     VkResult SwapChain::acquireNextImage(uint32_t* imageIndex) const noexcept{
-        vkWaitForFences(                               //Ждём, когда ВСЕ ранее записанные команды в командном буффере исполнятся.
+        vkWaitForFences(                                  //Ждём, когда ВСЕ ранее записанные команды в командном буффере исполнятся.
             m_device.device(),
             1,
             &m_inFlightFences[m_currentFrame],
             VK_TRUE,
             std::numeric_limits<uint64_t>::max());
         
-        VkResult result = vkAcquireNextImageKHR(       //запрос изображения из swapChain для дальнейшего рендера
+        VkResult result = vkAcquireNextImageKHR(         //запрос изображения из swapChain для дальнейшего рендера
             m_device.device(),
             m_swapChain,
             std::numeric_limits<uint64_t>::max(),
@@ -279,7 +279,7 @@ namespace sge {
     }
     VkResult SwapChain::submitCommandBuffers (
         const VkCommandBuffer* buffers, uint32_t* imageIndex) noexcept {
-        if (m_imagesInFlight[*imageIndex] != VK_NULL_HANDLE) {
+        if (m_imagesInFlight[*imageIndex] != VK_NULL_HANDLE) {                                                  //Проверяем, чтобы изображения рендерели по порядку, т.е. чтобы рендерелись в порядке 0 1 2 0 1 2 ...
             vkWaitForFences(m_device.device(), 1, &m_imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
         }
         m_imagesInFlight[*imageIndex] = m_inFlightFences[m_currentFrame];
