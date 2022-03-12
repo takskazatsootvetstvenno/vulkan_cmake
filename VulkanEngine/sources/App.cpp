@@ -1,12 +1,9 @@
-#include <iostream>
-#include <array>
-
-
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
-
+#include <array>
 #include "App.h"
+#include "Logger.h"
 #include "glm/glm.hpp"
 #include "GLFW/glfw3.h"
 namespace sge {
@@ -18,8 +15,7 @@ namespace sge {
     {
         loadModels();
         createPipeLineLayout();
-        recreateSwapChain();
-        createCommandBuffers();
+        createPipeline();
     }
 
     App::~App()
@@ -27,11 +23,36 @@ namespace sge {
         vkDestroyPipelineLayout(m_device.device(), m_pipelineLayout, nullptr);
     }
 
+    void App::renderGameObjects(VkCommandBuffer commandBuffer)
+    {
+        m_pipeline->bind(commandBuffer);
+
+        SimplePushConstantData push{
+            glm::vec2(0.3f,0.3f),
+            glm::vec3(0.7f, 0.2f, 0.7f) };
+        vkCmdPushConstants(
+            commandBuffer,
+            m_pipelineLayout,
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            0,
+            sizeof(SimplePushConstantData),
+            &push);
+
+        m_model->bind(commandBuffer);
+        m_model->draw(commandBuffer);
+    }
     void App::run() {
-        while (!m_window.shouldClose()) { 
+        while (!m_window.shouldClose()) {
             glfwPollEvents();
-            drawFrame();
-        }  
+            if (auto commandBuffer = m_renderer.beginFrame())
+            {
+                m_renderer.beginSwapChainRenderPass(commandBuffer);
+                renderGameObjects(commandBuffer);
+                m_renderer.endSwapChainRenderPass(commandBuffer);
+                if (m_renderer.endFrame() == true)
+                    createPipeline();
+            }
+        }
         vkDeviceWaitIdle(m_device.device());
     }
 
@@ -51,96 +72,6 @@ namespace sge {
             &m_pipelineLayout);
         assert(result == VK_SUCCESS && "failed to create pipeline layout!");
     }
-    void App::recreateSwapChain() noexcept
-    {
-        auto extent = m_window.getExtent();
-        while (extent.width == 0 || extent.height == 0)
-        {
-            extent = m_window.getExtent();
-            glfwWaitEvents();
-        }
-        vkDeviceWaitIdle(m_device.device());
-        m_swapChain = nullptr;
-        m_swapChain = std::make_unique<SwapChain>(m_device, extent);
-        std::cout << "New SwapChain has been created!\n";
-        createPipeline();
-    }
-
-    void App::createCommandBuffers() {
-        m_commandBuffers.resize(m_swapChain->imageCount());
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = m_device.getCommandPool();
-        allocInfo.commandBufferCount = static_cast<uint32_t>(m_commandBuffers.size());
-
-        auto result = vkAllocateCommandBuffers(m_device.device(), &allocInfo, m_commandBuffers.data());
-        assert(result == VK_SUCCESS && "failed to allocate command buffers!");
-        for (uint32_t i = 0; i < m_commandBuffers.size(); ++i)
-            recordCommandBuffer(i);
-    }
-    void App::recordCommandBuffer(const int imageIndex)
-    {
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        auto result = vkBeginCommandBuffer(m_commandBuffers[imageIndex], &beginInfo);
-        assert(result == VK_SUCCESS && "failed to begin recording command buffer!");
-        VkRenderPassBeginInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = m_swapChain->getRenderPass();
-        renderPassInfo.framebuffer = m_swapChain->getFrameBuffer(imageIndex);
-
-        renderPassInfo.renderArea.offset = { 0, 0 };
-        renderPassInfo.renderArea.extent = m_swapChain->getSwapChainExtent();
-        std::array<VkClearValue, 2> clearValues{};
-        clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.f };
-        clearValues[1].depthStencil = { 1.f, 0 };
-        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-        renderPassInfo.pClearValues = clearValues.data();
-
-        vkCmdBeginRenderPass(m_commandBuffers[imageIndex], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-        m_pipeline->bind(m_commandBuffers[imageIndex]);
-        m_model->bind(m_commandBuffers[imageIndex]);
-        for (int j = 0; j < 4; j++)
-        {
-            SimplePushConstantData push{};
-            push.offset = { 0.f, -0.5f + j * 0.25f };
-            push.color = { 0.f, 0.f, 0.2f + 0.2f * j };
-            vkCmdPushConstants(
-                m_commandBuffers[imageIndex],
-                m_pipelineLayout,
-                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                0,
-                sizeof(SimplePushConstantData),
-                &push);
-            m_model->draw(m_commandBuffers[imageIndex]);
-        }
-        vkCmdEndRenderPass(m_commandBuffers[imageIndex]);
-        result = vkEndCommandBuffer(m_commandBuffers[imageIndex]);
-        assert(result == VK_SUCCESS && "failed to record command buffer");
-    }
-    void App::drawFrame() noexcept{
-        uint32_t imageIndex;
-        auto result = m_swapChain->acquireNextImage(&imageIndex);
-        if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-            recreateSwapChain();
-            for (uint32_t i = 0; i < m_commandBuffers.size(); ++i)
-                recordCommandBuffer(i);
-            return;
-        }
-        assert(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR && "failed to acquire swap chain image!");
-        
-        result = m_swapChain->submitCommandBuffers(&m_commandBuffers[imageIndex], &imageIndex);
-        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_window.framebufferResized())
-        {
-            m_window.resetWindowResizeFlag();
-            recreateSwapChain();
-            for (uint32_t i = 0; i < m_commandBuffers.size(); ++i)
-                recordCommandBuffer(i);
-            return;
-        }
-        assert(result == VK_SUCCESS && "failed to present swap chain image");
-    }
 
     void App::loadModels()
     {
@@ -154,15 +85,17 @@ namespace sge {
     }
 
     void App::createPipeline() {
-        auto pipeline_config = Pipeline::createDefaultPipeline(m_swapChain->width(),
-            m_swapChain->height());
-        pipeline_config.renderPass = m_swapChain->getRenderPass();
+        assert(m_pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
+
+        auto pipeline_config = Pipeline::createDefaultPipeline(m_window.getExtent().width,
+            m_window.getExtent().height);
+        pipeline_config.renderPass = m_renderer.getSwapChainRenderPass();
         pipeline_config.pipelineLayout = m_pipelineLayout;
         m_pipeline = std::make_unique<Pipeline>(
             m_device,
             "Shaders/vertex.vert.spv",
             "Shaders/fragment.frag.spv",
             pipeline_config);
-        std::cout << "New Pipeline has been created!\n";
+        LOG_MSG("New Pipeline has been created!");
     }
 }  // namespace sge

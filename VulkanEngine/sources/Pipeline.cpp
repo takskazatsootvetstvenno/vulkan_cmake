@@ -2,7 +2,7 @@
 #include "model.h"
 
 #include <fstream>
-#include <iostream>
+#include "Logger.h"
 #include <cassert>
 namespace sge {
 
@@ -14,10 +14,10 @@ namespace sge {
 	std::string Pipeline::readFile(const std::string_view filepath)
 	{
 		std::ifstream file(filepath.data(), std::ios::ate | std::ios::binary);
-		if (file.is_open() == false)
+		if (!file.is_open())
 		{
-			std::cout << "Failed to open file: " << filepath << "!\n";
-			assert(false && "Failed to open file!");
+			LOG_ERROR("Failed to open file: " << filepath << "!")
+			assert(false);
 		}
 		size_t fileSize = static_cast<size_t>(file.tellg());
 		std::string buffer; buffer.resize(fileSize);
@@ -125,7 +125,11 @@ namespace sge {
 			&pipelineInfo,
 			nullptr,
 			&m_graphicsPipeline);
-		assert(result == VK_SUCCESS && "failed to create graphics pipeline");
+		if (result != VK_SUCCESS)
+		{
+			LOG_ERROR("failed to create graphics pipeline")
+			assert(false);
+		}
 		vkDestroyShaderModule(m_device.device(), vertShaderModule, nullptr);
 		vkDestroyShaderModule(m_device.device(), fragShaderModule, nullptr);
 	}
@@ -184,14 +188,18 @@ namespace sge {
 
 		return configInfo;
 	}
-	VkShaderModule Pipeline::createShaderModule(const std::string& code) {
+	VkShaderModule Pipeline::createShaderModule(const std::string& code) { 
 		VkShaderModuleCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		createInfo.codeSize = code.size();
 		createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 		VkShaderModule shaderModule;
 		auto result = vkCreateShaderModule(m_device.device(), &createInfo, nullptr, &shaderModule);
-		assert(result == VK_SUCCESS && "failed to create shader module");
+		if (result != VK_SUCCESS)
+		{
+			LOG_ERROR("failed to create shader module")
+			assert(false);
+		}
 		return shaderModule;
 	}
 	Pipeline::~Pipeline()

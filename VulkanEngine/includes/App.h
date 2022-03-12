@@ -1,7 +1,7 @@
 #pragma once
 #include "Window.h"
 #include "Device.h"
-#include "SwapChain.h"
+#include "Renderer.h"
 #include "Pipeline.h"
 #include "model.h"
 #include <memory>
@@ -17,19 +17,15 @@ namespace sge {
     private:
         void loadModels();
         void createPipeline();
-        void createCommandBuffers();
-        void freeCommandBuffers();
         void createPipeLineLayout();
-        void drawFrame() noexcept;
-        void recreateSwapChain() noexcept;
+        void renderGameObjects(VkCommandBuffer commandBuffer);
         void recordCommandBuffer(const int imageIndex);
 
         Window m_window{800, 600, "vulkan_window"};
         Device m_device{m_window};
-        std::unique_ptr<SwapChain> m_swapChain;
+        Renderer m_renderer{ m_window, m_device };
         VkPipelineLayout m_pipelineLayout;
         std::unique_ptr<Pipeline> m_pipeline;
-        std::vector<VkCommandBuffer> m_commandBuffers;
         std::unique_ptr<Model> m_model;
     };
 

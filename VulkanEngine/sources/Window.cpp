@@ -1,6 +1,6 @@
 #include "Window.h"
 #include "GLFW/glfw3.h"
-#include <iostream>
+#include "Logger.h"
 #include <cassert>
 namespace sge {
     Window::Window(int width, int height, std::string name) noexcept
@@ -32,8 +32,8 @@ namespace sge {
         auto result = glfwCreateWindowSurface(instance, m_pWindow, nullptr, surface);
         if (result != VK_SUCCESS)
         {
-            std::cout << "Failed to create window surface!";
-            assert(false && "failed to create window surface");
+            LOG_ERROR("Failed to create window surface!")
+            assert(false);
         }
     }
     /*static*/ void Window::frameResizeCallback(GLFWwindow* window, int width, int height) noexcept
@@ -47,8 +47,8 @@ namespace sge {
         int initGLFW = glfwInit();
         if (initGLFW != GLFW_TRUE)
         {
-            std::cout << "Can't init GLFW!";
-            assert(false && "Can't init GLFW!");
+            LOG_ERROR("Can't init GLFW!")
+            assert(false);
         }        
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
@@ -57,8 +57,8 @@ namespace sge {
         glfwSetFramebufferSizeCallback(m_pWindow, frameResizeCallback);
         if (m_pWindow == nullptr)
         {
-            std::cout << "Can't create GLFW window!";
-            assert(false && "Can't create GLFW window!");
+            LOG_ERROR("Can't create GLFW window!")
+            assert(false);
         }
     }
 }  // namespace sge

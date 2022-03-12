@@ -2,11 +2,10 @@
 #include "GLFW/glfw3.h"
 #include <cassert>
 #include <vector>
-#include <iostream>
 #include <string>
 #include <unordered_set>
 #include <set>
-
+#include <Logger.h>
 #ifdef _WIN32
 #include <Windows.h>
 #endif
@@ -16,7 +15,7 @@ namespace sge {
     debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                   VkDebugUtilsMessageTypeFlagsEXT messageType,
                   const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
-        std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+        LOG_ERROR("validation layer: " << pCallbackData->pMessage);
 
 #ifdef _WIN32
         OutputDebugStringA(pCallbackData->pMessage);
@@ -106,17 +105,22 @@ namespace sge {
     void Device::pickPhysicalDevice() {
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
-        assert(deviceCount != 0 && "failed to find GPUs with Vulkan support!");
+        if (deviceCount == 0)
+        {
+            LOG_ERROR("Failed to find GPUs with Vulkan support!")
+            assert(false);
+        }
+
         std::vector<VkPhysicalDevice> devices(deviceCount);
         vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
-        std::cout << deviceCount << " devices found:\n";
+        LOG_MSG(deviceCount << " devices found:")
         for (const auto& device : devices) {
             VkPhysicalDeviceProperties deviceProperties;
             vkGetPhysicalDeviceProperties(device, &deviceProperties);
-            std::cout << " * " << deviceProperties.deviceName << " with vulkan version: "
+            LOG_MSG(" * " << deviceProperties.deviceName << " with vulkan version: "
                 << VK_API_VERSION_MAJOR(deviceProperties.apiVersion) << "."
                 << VK_API_VERSION_MINOR(deviceProperties.apiVersion) << "."
-                << VK_API_VERSION_PATCH(deviceProperties.apiVersion) << std::endl;
+                << VK_API_VERSION_PATCH(deviceProperties.apiVersion))
         }
         for (const auto& device : devices) {
             VkPhysicalDeviceProperties deviceProperties;
@@ -146,17 +150,18 @@ namespace sge {
             if (QueueFamilyIndices indices = findQueueFamilies(device);
                 ExtFound && indices.isComplete() && swapChainAdequate &&
                 supportedFeatures.samplerAnisotropy) {
-                std::cout << "Device used:\n" << " * " << deviceProperties.deviceName << " with vulkan version: "
+                LOG_MSG("Device used:")
+                LOG_MSG(" * " << deviceProperties.deviceName << " with vulkan version: "
                     << VK_API_VERSION_MAJOR(deviceProperties.apiVersion) << "."
                     << VK_API_VERSION_MINOR(deviceProperties.apiVersion) << "."
-                    << VK_API_VERSION_PATCH(deviceProperties.apiVersion) << std::endl;
+                    << VK_API_VERSION_PATCH(deviceProperties.apiVersion))
                 m_physicalDevice = device;
                 break;
             }
         }   
         if (m_physicalDevice == VK_NULL_HANDLE) {
-            std::cout << "Failed to find suitable GPU!!!\n";
-            assert(false && "Failed to find suitable GPU");
+            LOG_ERROR("Failed to find suitable GPU!!!");
+            assert(false);
         }
     }
     void Device::createSurface() { 
@@ -194,14 +199,18 @@ namespace sge {
             createInfo.enabledLayerCount = static_cast<uint32_t>(m_validationLayers.size());
             createInfo.ppEnabledLayerNames = m_validationLayers.data();
             for (auto layer : m_validationLayers)
-                std::cout << "Used validation level: " << layer << std::endl;
+                LOG_MSG("Used validation level: " << layer);
         } else {
-            std::cout << "Vulkan started without validation levels\n";
+            LOG_MSG("Vulkan started without validation levels");
             createInfo.enabledLayerCount = 0;
         }
         auto result = vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device);
         volkLoadDevice(m_device);   //only for one device!!!!!
-        assert(result == VK_SUCCESS && "failed to create logical device!");
+        if (result != VK_SUCCESS)
+        {
+            LOG_ERROR("Failed to create logical device!")
+            assert(false);
+        }
         vkGetDeviceQueue(m_device, indices.graphicsFamily, 0, &m_graphicsQueue);
         vkGetDeviceQueue(m_device, indices.presentFamily, 0, &m_presentQueue);
     }
@@ -266,14 +275,14 @@ namespace sge {
         assert(vulk == VK_SUCCESS && "Can't initialize volk loader!");
         uint32_t impl_support;
         vkEnumerateInstanceVersion(&impl_support);
-        std::cout << "Supported vulkan version: " 
+        LOG_MSG("Supported vulkan version: "
             << VK_API_VERSION_MAJOR(impl_support) << "." 
             << VK_API_VERSION_MINOR(impl_support) << "." 
-            << VK_API_VERSION_PATCH(impl_support) << std::endl;
+            << VK_API_VERSION_PATCH(impl_support));
 
         if (m_enableValidationLayers && !checkValidationLayerSupport())
         {
-            std::cout << "Validation layers requested, but not available!\nVulkan api will not use any validation layers!\n\n";
+            LOG_ERROR("Validation layers requested, but not available!\nVulkan api will not use any validation layers!\n");
             m_enableValidationLayers = false;
         }
 
@@ -284,12 +293,12 @@ namespace sge {
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = "Simplest engine";
         appInfo.pNext = nullptr;
-        appInfo.apiVersion = VK_MAKE_VERSION(1, 2, 194);
+        appInfo.apiVersion = VK_MAKE_VERSION(1, 3, 194);
 
-        std::cout << "Requested vulkan version: "
+        LOG_MSG("Requested vulkan version: "
             << VK_API_VERSION_MAJOR(appInfo.apiVersion) << "."
             << VK_API_VERSION_MINOR(appInfo.apiVersion) << "."
-            << VK_API_VERSION_PATCH(appInfo.apiVersion) << std::endl;
+            << VK_API_VERSION_PATCH(appInfo.apiVersion))
         checkForSupportedExtentions();
 
         VkInstanceCreateInfo instanceCreateInfo{};
@@ -320,7 +329,11 @@ namespace sge {
             instanceCreateInfo.pNext = nullptr;
         }
         VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &m_instance);
-        assert(result == VK_SUCCESS && "failed to create instance");
+        if (result != VK_SUCCESS)
+        {
+            LOG_ERROR("Failed to create a vulkan instance");
+            assert(false);
+        }
         volkLoadInstance(m_instance);
     }
 
@@ -328,7 +341,12 @@ namespace sge {
         uint32_t glfwExtentionCount;
         const char** glfwExtentions; 
         glfwExtentions = glfwGetRequiredInstanceExtensions(&glfwExtentionCount);
-        assert(glfwExtentions != nullptr && "Can't get required instance extentions from glfw");
+        if (glfwExtentions == nullptr)
+        {
+            LOG_ERROR("Can't get required instance extentions from glfw")
+            assert(false);
+        }
+      
         std::vector<const char*> allExtentions(glfwExtentions, glfwExtentions + glfwExtentionCount);
 
         if (m_enableValidationLayers)
@@ -345,23 +363,28 @@ namespace sge {
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
         std::unordered_set<std::string> availableExtentions;
         std::vector<std::string> missingExtentions;
-        std::cout << "Available extenstions:\n";
+        LOG_MSG("Available extenstions:")
         for (const auto& extention : extensions)
         {
-            std::cout << "\t" << extention.extensionName << "\n";
+            LOG_MSG("\t" << extention.extensionName);
             availableExtentions.insert(extention.extensionName);
         }
-        std::cout << "Required extentions\n";
+        LOG_MSG("Required extentions");
         auto requiredExtentions = getRequiredExtentions();
         for (const auto& extention : requiredExtentions) {
-            std::cout << "\t" << extention << "\n";
+            LOG_MSG("\t" << extention);
             if (availableExtentions.find(extention) == availableExtentions.end()) 
                 missingExtentions.emplace_back(extention);
         }
         for (const auto& extention : missingExtentions) {
-            std::cout << "Missing extention: " << extention << "\n";
+            LOG_ERROR("Missing extention: " << extention);
+
         }
-        assert(missingExtentions.size() == 0 && "Missing required extention!");
+        if (!missingExtentions.empty())
+        {
+            LOG_ERROR("Missing required extention!")
+            assert(false);
+        }
     }
     VkFormat Device::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
     {
@@ -390,7 +413,11 @@ namespace sge {
             VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
         auto result = vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool);
-        assert(result == VK_SUCCESS && "failed to create command pool!");
+        if (result != VK_SUCCESS)
+        {
+            LOG_ERROR("failed to create command pool!");
+            assert(false);
+        }
     }
 
     uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
@@ -442,8 +469,11 @@ namespace sge {
         bufferInfo.usage = usage;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         auto result = vkCreateBuffer(m_device, &bufferInfo, nullptr, &buffer);
-        assert(result == VK_SUCCESS && "Failed to create vertex buffer");
-
+        if (result != VK_SUCCESS)
+        {
+            LOG_ERROR("Failed to create vertex buffer");
+            assert(false);
+        }   
         VkMemoryRequirements memRequirements;
         vkGetBufferMemoryRequirements(m_device, buffer, &memRequirements);
         
@@ -452,7 +482,11 @@ namespace sge {
         allocInfo.allocationSize = memRequirements.size;
         allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
         result = vkAllocateMemory(m_device, &allocInfo, nullptr, &bufferMemory);
-        assert(result == VK_SUCCESS && "Failed to allocate vertex buffer memory");
+        if (result != VK_SUCCESS)
+        {
+            LOG_ERROR("Failed to allocate vertex buffer memory");
+            assert(false);
+        }
         vkBindBufferMemory(m_device, buffer, bufferMemory, 0);
     }
 
@@ -468,6 +502,10 @@ namespace sge {
         createInfo.pfnUserCallback = debugCallback;
         createInfo.pUserData = nullptr;
         auto createResult = CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debugMessenger);
-        assert(createResult == VK_SUCCESS && "failed to set up debug messenger!");
+        if (createResult != VK_SUCCESS)
+        {
+            LOG_ERROR("failed to set up debug messenger!");
+            assert(false);
+        }
     }
 }  // namespace sge

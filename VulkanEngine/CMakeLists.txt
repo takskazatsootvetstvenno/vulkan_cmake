@@ -6,14 +6,17 @@ include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
 set(CORE_INCLUDES
+	includes/Renderer.h
 	includes/App.h
 	includes/Device.h
 	includes/Pipeline.h
 	includes/SwapChain.h
 	includes/Window.h
 	includes/Model.h
+	includes/Logger.h
 )
 set(CORE_SOURCES
+	sources/Renderer.cpp
 	sources/App.cpp
 	sources/Device.cpp
 	sources/main.cpp
@@ -21,6 +24,7 @@ set(CORE_SOURCES
 	sources/SwapChain.cpp
 	sources/Window.cpp
 	sources/Model.cpp
+	sources/Logger.cpp
 )
 add_executable(${CORE_PROJECT_NAME}
 	${CORE_INCLUDES}
@@ -33,6 +37,12 @@ target_include_directories(${CORE_PROJECT_NAME} PRIVATE src)
 
 target_link_libraries(${CORE_PROJECT_NAME} ${CONAN_LIBS})
 
+execute_process(COMMAND ${PROJECT_SOURCE_DIR}/compile_shaders.cmd  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+if(MSVC)
+add_custom_command(TARGET ${CORE_PROJECT_NAME}
+    POST_BUILD 
+    COMMAND ${PROJECT_SOURCE_DIR}/compile_shaders.cmd  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+endif()
 add_custom_command(TARGET ${CORE_PROJECT_NAME}
     POST_BUILD 
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/fragment.frag ${PROJECT_BINARY_DIR}/VulkanEngine/Shaders/fragment.frag

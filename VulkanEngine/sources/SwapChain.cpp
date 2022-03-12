@@ -1,8 +1,8 @@
 
 #include "SwapChain.h"
-#include <iostream>
 #include <algorithm>
 #include <cassert>
+#include "Logger.h"
 #include <array>
 namespace sge {
     SwapChain::SwapChain(Device& deviceRef, VkExtent2D windowExtent)
@@ -87,18 +87,18 @@ namespace sge {
      const std::vector<VkPresentModeKHR>& availablePresentModes) {
     for (const auto &availablePresentMode : availablePresentModes)
         if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR){
-            std::cout << "Present mode: Mailbox" << std::endl;
+            LOG_MSG("Present mode: Mailbox");
             return availablePresentMode;
         }
     
     for (const auto& availablePresentMode : availablePresentModes)
         if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR){
-            std::cout << "Present mode: Immediate" << std::endl;
+            LOG_MSG("Present mode: Immediate");
             return availablePresentMode;
         }
     
-     std::cout << "Present mode: V-Sync" << std::endl;
-     return VK_PRESENT_MODE_FIFO_KHR;
+    LOG_MSG("Present mode: V-Sync");
+    return VK_PRESENT_MODE_FIFO_KHR;
     }
     void SwapChain::createSyncObjects()
     {
@@ -116,7 +116,8 @@ namespace sge {
                 vkCreateFence(m_device.device(), &fenceInfo, nullptr, &m_inFlightFences[i]) != VK_SUCCESS
                 ) 
             {
-                assert(false && "failed to create synchronization objects for a frame!");
+                LOG_ERROR("Failed to create synchronization objects for a frame!")
+                assert(false);
             }
         }
     }
@@ -175,8 +176,11 @@ namespace sge {
         createInfo.clipped = VK_TRUE;
         createInfo.oldSwapchain = VK_NULL_HANDLE;
         auto result = vkCreateSwapchainKHR(m_device.device(), &createInfo, nullptr, &m_swapChain);
-        assert(result == VK_SUCCESS && "failed to create swap chain!");
-
+        if (result != VK_SUCCESS)
+        {
+            LOG_ERROR("failed to create swap chain!")
+            assert(false);
+        }
         vkGetSwapchainImagesKHR(m_device.device(), m_swapChain, &imageCount, nullptr);
         m_swapChainImages.resize(imageCount);
         vkGetSwapchainImagesKHR(m_device.device(), m_swapChain, &imageCount, m_swapChainImages.data());
@@ -202,7 +206,11 @@ namespace sge {
             createInfo.subresourceRange.baseArrayLayer = 0;
             createInfo.subresourceRange.layerCount = 1;
             auto result = vkCreateImageView(m_device.device(), &createInfo, nullptr, &m_swapChainImageViews[i]);
-            assert(result == VK_SUCCESS && "failed to create image views!");
+            if (result != VK_SUCCESS)
+            {
+                LOG_ERROR("failed to create image views!")
+                assert(false);
+            }
         }
     }
     void SwapChain::createDepthResources() {
@@ -248,7 +256,11 @@ namespace sge {
             viewInfo.subresourceRange.layerCount = 1;
 
             auto result = vkCreateImageView(m_device.device(), &viewInfo, nullptr, &m_depthImageViews[i]);
-            assert(result == VK_SUCCESS && "failed to create texture image view!");
+            if (result != VK_SUCCESS)
+            {
+                LOG_ERROR("failed to create texture image view!")
+                assert(false);
+            }
         }
     }
 
@@ -300,8 +312,15 @@ namespace sge {
         submitInfo.pSignalSemaphores = signalSemaphores;
 
         vkResetFences(m_device.device(), 1, &m_inFlightFences[m_currentFrame]);                                 //Сброс fence
+
         auto result = vkQueueSubmit(m_device.graphicsQueue(), 1, &submitInfo, m_inFlightFences[m_currentFrame]);//Отправляем командный буффер, причём в waitStages будет стоять семофор ожидающий
-        assert(result == VK_SUCCESS && "failed to submit draw command buffer!");                                //конца чтения изображения из presentEngine(сигнал конца vkAcquireNextImageKHR даёт в виде семофора),
+                                                                                                                //конца чтения изображения из presentEngine(сигнал конца vkAcquireNextImageKHR даёт в виде семофора),
+        assert(result == VK_SUCCESS && "failed to submit draw command buffer!");                                
+        if (result != VK_SUCCESS)
+        {
+            LOG_ERROR("failed to submit draw command buffer!");
+            assert(false);
+        }
         VkPresentInfoKHR presentInfo = {};                                                                      //а после того как все команды буффера исполнятся будет взведён fence, означающий, что буффер пуст
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
@@ -377,7 +396,11 @@ namespace sge {
         renderPassInfo.pDependencies = &dependency;
 
         auto result = vkCreateRenderPass(m_device.device(), &renderPassInfo, nullptr, &m_renderPass);
-        assert(result == VK_SUCCESS && "failed to create render pass!");
+        if (result != VK_SUCCESS)
+        {
+            LOG_ERROR("failed to create render pass!");
+            assert(false);
+        }
     }
 
     void SwapChain::createFramebuffers() {
@@ -400,7 +423,11 @@ namespace sge {
                 &framebufferInfo,
                 nullptr,
                 &m_swapChainFramebuffers[i]);
-            assert(result == VK_SUCCESS && "failed to create framebuffer!");
+            if (result != VK_SUCCESS)
+            {
+                LOG_ERROR("failed to create render pass!");
+                assert(false);
+            }
         }
     }
 }
