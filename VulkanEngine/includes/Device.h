@@ -33,6 +33,8 @@ namespace sge {
         VkQueue graphicsQueue() const noexcept;
         VkQueue presentQueue() const noexcept;
         VkCommandPool getCommandPool() const noexcept;
+        VkInstance getInstance() const noexcept;
+        bool enableValidationLayers() const noexcept;
         VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
         void createImageWithInfo(const VkImageCreateInfo& imageInfo,
             VkMemoryPropertyFlags properties,

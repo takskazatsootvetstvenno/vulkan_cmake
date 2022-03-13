@@ -6,4 +6,4 @@ conan install vulkan_cmake -if build --build missing -s build_type=Release -s co
 cd build
 cmake ../vulkan_cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release
 cmake --build . --config Release
-cmake --install .
+cmake --install . --config Release

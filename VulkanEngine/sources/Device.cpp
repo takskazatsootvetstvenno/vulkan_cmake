@@ -244,6 +244,16 @@ namespace sge {
         return m_commandPool; 
     }
 
+    VkInstance Device::getInstance() const noexcept
+    {
+        return m_instance;
+    }
+
+    bool Device::enableValidationLayers() const noexcept
+    {
+        return m_enableValidationLayers;
+    }
+
     QueueFamilyIndices Device::findQueueFamilies(VkPhysicalDevice device) {
 
         uint32_t queueFamilyCount = 0;

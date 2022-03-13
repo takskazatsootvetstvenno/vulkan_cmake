@@ -1,5 +1,7 @@
 #include "model.h"
+#include <string>
 namespace sge {
+	static PFN_vkSetDebugUtilsObjectNameEXT SetDebugUtilsObjectNameEXT;
 	Model::~Model()
 	{
 		vkDestroyBuffer(m_device.device(), m_vertexBuffer, nullptr);
