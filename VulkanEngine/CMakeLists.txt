@@ -12,21 +12,30 @@ set(CORE_INCLUDES
 	includes/Pipeline.h
 	includes/SwapChain.h
 	includes/Window.h
+	includes/Camera.h
 	includes/Model.h
 	includes/Logger.h
+	includes/Buffer.h
+	includes/Mesh.h
+	includes/Descriptors.h
+	includes/MeshMGR.h	
 )
 set(CORE_SOURCES
 	sources/Renderer.cpp
 	sources/App.cpp
 	sources/Device.cpp
-	sources/main.cpp
 	sources/Pipeline.cpp
 	sources/SwapChain.cpp
 	sources/Window.cpp
+	sources/Camera.cpp
 	sources/Model.cpp
 	sources/Logger.cpp
+	sources/Buffer.cpp
+	sources/Mesh.cpp
+	sources/Descriptors.cpp
+	sources/MeshMGR.cpp
 )
-add_executable(${CORE_PROJECT_NAME}
+add_library(${CORE_PROJECT_NAME} STATIC
 	${CORE_INCLUDES}
 	${CORE_SOURCES}
 )
@@ -36,27 +45,6 @@ target_include_directories(${CORE_PROJECT_NAME} PUBLIC includes)
 target_include_directories(${CORE_PROJECT_NAME} PRIVATE src)
 
 target_link_libraries(${CORE_PROJECT_NAME} ${CONAN_LIBS})
-
-execute_process(COMMAND ${PROJECT_SOURCE_DIR}/compile_shaders.cmd  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-if(MSVC)
-add_custom_command(TARGET ${CORE_PROJECT_NAME}
-    POST_BUILD 
-    COMMAND ${PROJECT_SOURCE_DIR}/compile_shaders.cmd  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-endif()
-add_custom_command(TARGET ${CORE_PROJECT_NAME}
-    POST_BUILD 
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/fragment.frag ${PROJECT_BINARY_DIR}/VulkanEngine/Shaders/fragment.frag
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/fragment.frag.spv ${PROJECT_BINARY_DIR}/VulkanEngine/Shaders/fragment.frag.spv
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/vertex.vert ${PROJECT_BINARY_DIR}/VulkanEngine/Shaders/vertex.vert
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/vertex.vert.spv ${PROJECT_BINARY_DIR}/VulkanEngine/Shaders/vertex.vert.spv
-)
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-	add_compile_definitions(CMAKE_BUILD_TYPE_RELEASE)
-	message("It is Release!" )
-else()
-	add_compile_definitions(CMAKE_BUILD_TYPE_DEBUG)
-	message("It is Debug!" )
-endif()
 
 install(TARGETS ${CORE_PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/install)
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/data/Shaders DESTINATION ${CMAKE_INSTALL_PREFIX}/install)

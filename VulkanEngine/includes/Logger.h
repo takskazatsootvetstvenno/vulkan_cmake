@@ -19,6 +19,6 @@ namespace sge {
 		~Logger();
 		std::stringstream m_ss;
 	};
-#define LOG_ERROR(...) {Logger::Instance().log() << "In file: "<< __FILE__ << ", in line " << __LINE__ << ": " <<  __VA_ARGS__; Logger::Instance().flush_error();}
-#define LOG_MSG(...)   {Logger::Instance().log() <<  __VA_ARGS__; Logger::Instance().flush_info();}
+#define LOG_ERROR(...) {sge::Logger::Instance().log() << "In file: "<< __FILE__ << ", in line " << __LINE__ << ": " <<  __VA_ARGS__; sge::Logger::Instance().flush_error();}
+#define LOG_MSG(...)   {sge::Logger::Instance().log() <<  __VA_ARGS__; sge::Logger::Instance().flush_info();}
 }

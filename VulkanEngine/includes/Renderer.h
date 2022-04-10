@@ -10,21 +10,21 @@ namespace sge {
 		~Renderer();
 		Renderer(const Renderer&) = delete;
 		Renderer& operator=(const Renderer&) = delete;
-		void run();
 
-		VkCommandBuffer beginFrame();
-		bool endFrame();
-		void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
-		void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
-
-		VkRenderPass getSwapChainRenderPass() const;
+		VkCommandBuffer beginFrame() noexcept;
+		VkCommandBuffer getCurrentCommandBuffer() const noexcept;
+		VkRenderPass getSwapChainRenderPass() const noexcept;
 		bool isFrameInProgress() const;
-		VkCommandBuffer getCurrentCommandBuffer() const;
+		bool endFrame() noexcept;
+		uint32_t getCurrentImageIndex() const noexcept;
+		int getFrameIndex() const noexcept;
+		void beginSwapChainRenderPass(VkCommandBuffer commandBuffer) noexcept;
+		void endSwapChainRenderPass(VkCommandBuffer commandBuffer) noexcept;
+
 	private:
 		void freeCommandBuffers();
 		void createCommandBuffers();
 		void recreateSwapChain() noexcept;
-		//void recordCommandBuffer(const int imageIndex);
 
 		Window& m_window;
 		Device& m_device;
@@ -32,6 +32,7 @@ namespace sge {
 		std::vector<VkCommandBuffer> m_commandBuffers;
 		uint32_t m_currentImageIndex;
 		bool m_isFrameStarted = false;
+		int m_currentFrameIndex = 0;
 	};
 
 }

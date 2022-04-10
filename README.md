@@ -27,7 +27,11 @@ cd vulkan_cmake
 in test_dir you will find the build and install directory
 # Used materials/libs
  
-Used materials from https://vulkan-tutorial.com/
+Used materials from
+
+https://vulkan-tutorial.com/
+
+https://github.com/blurrypiano/littleVulkanEngine
 
 Also used:
 

@@ -20,12 +20,16 @@ namespace sge {
 
     class Device {
     public:
+
         Device(Window& window);
         ~Device();
         Device(const Device&) = delete;
         Device& operator=(const Device&) = delete;
         Device(Device&&) = delete;
         Device& operator=(Device&&) = delete;
+
+        VkPhysicalDeviceProperties properties;
+
         SwapChainSupportDetails getSwapChainSupport();
         QueueFamilyIndices findPhysicalQueueFamilies();
         VkDevice device() const noexcept;
@@ -46,6 +50,7 @@ namespace sge {
             VkMemoryPropertyFlags properties,
             VkBuffer& buffer,
             VkDeviceMemory& bufferMemory);
+        void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) const;
     private:
 
         void createInstance();
@@ -56,6 +61,10 @@ namespace sge {
         void checkForSupportedExtentions();
         bool checkValidationLayerSupport();
         void createCommandPool();
+
+        void endSingleTimeCommands(const VkCommandBuffer commandBuffer) const;
+        VkCommandBuffer beginSingleTimeCommands() const;
+
         uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
         std::vector<const char*> getRequiredExtentions();
         QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);

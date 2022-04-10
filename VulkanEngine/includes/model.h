@@ -1,33 +1,27 @@
 #pragma once
 #include "Device.h"
+#include "Mesh.h"
 #include <vector>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
 
 namespace sge {
     class Model {
     public:
-        struct Vertex {
-            glm::vec2 m_position;
-            static std::vector<VkVertexInputBindingDescription> getBindingDescription();
-            static std::vector<VkVertexInputAttributeDescription> getAttributeDescription();
-        };
-
-        Model(Device& device, const std::vector<Vertex>& vertices);
+        Model(Device& device);
         ~Model();
         Model(const Model&) = delete;
         Model& operator=(const Model&) = delete;
-
-        void bind(VkCommandBuffer commandBuffer) const noexcept;
-        void draw(VkCommandBuffer commandBuffer) const noexcept;
+        Model(Model&&) = default;
+        Model& operator=(Model&&) = default;
+        void bind(const VkCommandBuffer commandBuffer, const Mesh& mesh) const noexcept;
+        void draw(const VkCommandBuffer commandBuffer, const Mesh& mesh) const noexcept;
     private:
-        void createVertexBuffers(const std::vector<Vertex>& vertices);
+        void createVertexBuffers(const std::vector<Vertex>& vertices, Mesh& mesh);
+        void createIndexBuffers(const std::vector<uint32_t>& indices, Mesh& mesh);
         Device& m_device;
-        VkBuffer m_vertexBuffer;
-        VkDeviceMemory m_vertexBefferMemory;
-        uint32_t m_vertexCount;
     };
-
-}  // namespace sge
+}

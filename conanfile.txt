@@ -2,6 +2,7 @@
 glfw/3.3.6
 glm/0.9.9.8
 volk/1.3.204
+assimp/5.1.0
 [generators]
 cmake
 

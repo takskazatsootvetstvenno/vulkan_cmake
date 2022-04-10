@@ -7,10 +7,12 @@
 #include "GLFW/glfw3.h"
 #include "Logger.h"
 namespace sge {
+
     struct SimplePushConstantData {
         alignas(16) glm::vec2 offset;
         alignas(16) glm::vec3 color;
     };
+
     Renderer::Renderer(Window& window, Device& device)
         :m_window(window), m_device(device)
     {
@@ -83,7 +85,7 @@ namespace sge {
        //     recordCommandBuffer(i);
     }
 
-    VkCommandBuffer Renderer::beginFrame()
+    VkCommandBuffer Renderer::beginFrame() noexcept
     {
         assert(!m_isFrameStarted && "Can't call beginFrame while already in progress");
 
@@ -112,7 +114,11 @@ namespace sge {
         }
         return commandBuffer;
     }
-    bool Renderer::endFrame()
+    int Renderer::getFrameIndex() const noexcept{
+        assert(m_isFrameStarted && "Cannot get frame index when frame not in progress");
+        return m_currentFrameIndex;
+    }
+    bool Renderer::endFrame() noexcept
     {
         bool needCreateNewPipeline = false;
         assert(m_isFrameStarted && "Can't call endFrame while frame is not in progress");
@@ -136,9 +142,14 @@ namespace sge {
             assert(false);
         }
         m_isFrameStarted = false;
+        m_currentFrameIndex = (m_currentFrameIndex + 1) % SwapChain::MAX_FRAMES_IN_FLIGHT;
         return needCreateNewPipeline;
     }
-    void Renderer::beginSwapChainRenderPass(VkCommandBuffer commandBuffer)
+    uint32_t Renderer::getCurrentImageIndex() const noexcept
+    {
+        return m_currentImageIndex;
+    }
+    void Renderer::beginSwapChainRenderPass(VkCommandBuffer commandBuffer) noexcept
     {
         assert(m_isFrameStarted && "Can't call beginSwapChainRenderPass if frame is not in progress");
         assert(commandBuffer == getCurrentCommandBuffer() && "Can't begin render pass on command buffer from a different frame");
@@ -159,14 +170,14 @@ namespace sge {
         vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     }
-    void Renderer::endSwapChainRenderPass(VkCommandBuffer commandBuffer)
+    void Renderer::endSwapChainRenderPass(VkCommandBuffer commandBuffer) noexcept
     {
         assert(m_isFrameStarted && "can't call endSwapChainRenderPass if frame is not in progress");
         assert(commandBuffer == getCurrentCommandBuffer() && "Can't end render pass on command buffer from a different frame");
         vkCmdEndRenderPass(commandBuffer);
     }
 
-	VkRenderPass Renderer::getSwapChainRenderPass() const
+	VkRenderPass Renderer::getSwapChainRenderPass() const noexcept
 	{
 		return m_swapChain->getRenderPass();
 	}
@@ -174,7 +185,7 @@ namespace sge {
 	{
 		return m_isFrameStarted;
 	}
-	VkCommandBuffer Renderer::getCurrentCommandBuffer() const
+	VkCommandBuffer Renderer::getCurrentCommandBuffer() const noexcept
 	{
 		assert(m_isFrameStarted && "Cannot get command buffer when frame not in progress!");
 		return m_commandBuffers[m_currentImageIndex];

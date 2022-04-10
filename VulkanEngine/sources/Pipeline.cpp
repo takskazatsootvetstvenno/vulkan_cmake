@@ -57,8 +57,8 @@ namespace sge {
 
 		VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
-		auto bindingsDescriptions = Model::Vertex::getBindingDescription();
-		auto attributeDescriptions = Model::Vertex::getAttributeDescription();
+		auto bindingsDescriptions = Vertex::getBindingDescription();
+		auto attributeDescriptions = Vertex::getAttributeDescription();
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -160,7 +160,7 @@ namespace sge {
 		configInfo.rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
 		configInfo.rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
 		configInfo.rasterizationInfo.lineWidth = 1.0f;
-		configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+		configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;//VK_CULL_MODE_BACK_BIT;
 		configInfo.rasterizationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; //VK_FRONT_FACE_CLOCKWISE;
 		configInfo.rasterizationInfo.depthBiasEnable = VK_FALSE;
 		configInfo.rasterizationInfo.depthBiasConstantFactor = 0.f;
@@ -197,7 +197,7 @@ namespace sge {
 		auto result = vkCreateShaderModule(m_device.device(), &createInfo, nullptr, &shaderModule);
 		if (result != VK_SUCCESS)
 		{
-			LOG_ERROR("failed to create shader module")
+			LOG_ERROR("Failed to create shader module")
 			assert(false);
 		}
 		return shaderModule;
