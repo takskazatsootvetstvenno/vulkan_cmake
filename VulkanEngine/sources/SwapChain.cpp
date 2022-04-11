@@ -275,18 +275,18 @@ namespace sge {
 
     VkResult SwapChain::acquireNextImage(uint32_t* imageIndex) const noexcept{
         
-        vkWaitForFences(                                  //Ждём, когда ВСЕ ранее записанные команды в командном буффере исполнятся.
+        vkWaitForFences(                                  //Р–РґС‘Рј, РєРѕРіРґР° Р’РЎР• СЂР°РЅРµРµ Р·Р°РїРёСЃР°РЅРЅС‹Рµ РєРѕРјР°РЅРґС‹ РІ РєРѕРјР°РЅРґРЅРѕРј Р±СѓС„С„РµСЂРµ РёСЃРїРѕР»РЅСЏС‚СЃСЏ.
             m_device.device(),
             1,
             &m_inFlightFences[m_currentFrame],
             VK_TRUE,
             std::numeric_limits<uint64_t>::max());
         
-        VkResult result = vkAcquireNextImageKHR(         //запрос изображения из swapChain для дальнейшего рендера
+        VkResult result = vkAcquireNextImageKHR(         //Р·Р°РїСЂРѕСЃ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ РёР· swapChain РґР»СЏ РґР°Р»СЊРЅРµР№С€РµРіРѕ СЂРµРЅРґРµСЂР°
             m_device.device(),
             m_swapChain,
             std::numeric_limits<uint64_t>::max(),
-            m_imageAvailableSemaphores[m_currentFrame],  //как только изображение считается из presentEngine, взведётся этот семофор в GPU
+            m_imageAvailableSemaphores[m_currentFrame],  //РєР°Рє С‚РѕР»СЊРєРѕ РёР·РѕР±СЂР°Р¶РµРЅРёРµ СЃС‡РёС‚Р°РµС‚СЃСЏ РёР· presentEngine, РІР·РІРµРґС‘С‚СЃСЏ СЌС‚РѕС‚ СЃРµРјРѕС„РѕСЂ РІ GPU
             VK_NULL_HANDLE,
             imageIndex);
 
@@ -294,7 +294,7 @@ namespace sge {
     }
     VkResult SwapChain::submitCommandBuffers (
         const VkCommandBuffer* buffers, uint32_t* imageIndex) noexcept {
-        if (m_imagesInFlight[*imageIndex] != VK_NULL_HANDLE) {                                                  //Проверяем, чтобы изображения рендерели по порядку, т.е. чтобы рендерелись в порядке 0 1 2 0 1 2 ...
+        if (m_imagesInFlight[*imageIndex] != VK_NULL_HANDLE) {                                                  //РџСЂРѕРІРµСЂСЏРµРј, С‡С‚РѕР±С‹ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ СЂРµРЅРґРµСЂРµР»Рё РїРѕ РїРѕСЂСЏРґРєСѓ, С‚.Рµ. С‡С‚РѕР±С‹ СЂРµРЅРґРµСЂРµР»РёСЃСЊ РІ РїРѕСЂСЏРґРєРµ 0 1 2 0 1 2 ...
             vkWaitForFences(m_device.device(), 1, &m_imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
         }
         m_imagesInFlight[*imageIndex] = m_inFlightFences[m_currentFrame];
@@ -302,7 +302,7 @@ namespace sge {
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         
         VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
-        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };                  // указываем, на какую стадию впихнуть семофор, все стадии до этой - без блокировки в GPU
+        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };                  // СѓРєР°Р·С‹РІР°РµРј, РЅР° РєР°РєСѓСЋ СЃС‚Р°РґРёСЋ РІРїРёС…РЅСѓС‚СЊ СЃРµРјРѕС„РѕСЂ, РІСЃРµ СЃС‚Р°РґРёРё РґРѕ СЌС‚РѕР№ - Р±РµР· Р±Р»РѕРєРёСЂРѕРІРєРё РІ GPU
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphores;
         submitInfo.pWaitDstStageMask = waitStages;
@@ -314,17 +314,17 @@ namespace sge {
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        vkResetFences(m_device.device(), 1, &m_inFlightFences[m_currentFrame]);                                 //Сброс fence
+        vkResetFences(m_device.device(), 1, &m_inFlightFences[m_currentFrame]);                                 //РЎР±СЂРѕСЃ fence
 
-        auto result = vkQueueSubmit(m_device.graphicsQueue(), 1, &submitInfo, m_inFlightFences[m_currentFrame]);//Отправляем командный буффер, причём в waitStages будет стоять семофор ожидающий
-                                                                                                                //конца чтения изображения из presentEngine(сигнал конца vkAcquireNextImageKHR даёт в виде семофора),
+        auto result = vkQueueSubmit(m_device.graphicsQueue(), 1, &submitInfo, m_inFlightFences[m_currentFrame]);//РћС‚РїСЂР°РІР»СЏРµРј РєРѕРјР°РЅРґРЅС‹Р№ Р±СѓС„С„РµСЂ, РїСЂРёС‡С‘Рј РІ waitStages Р±СѓРґРµС‚ СЃС‚РѕСЏС‚СЊ СЃРµРјРѕС„РѕСЂ РѕР¶РёРґР°СЋС‰РёР№
+                                                                                                                //РєРѕРЅС†Р° С‡С‚РµРЅРёСЏ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ РёР· presentEngine(СЃРёРіРЅР°Р» РєРѕРЅС†Р° vkAcquireNextImageKHR РґР°С‘С‚ РІ РІРёРґРµ СЃРµРјРѕС„РѕСЂР°),
         assert(result == VK_SUCCESS && "failed to submit draw command buffer!");                                
         if (result != VK_SUCCESS)
         {
             LOG_ERROR("failed to submit draw command buffer!\nError: " << getErrorNameFromEnum(result) << " | " << result)
             assert(false);
         }
-        VkPresentInfoKHR presentInfo = {};                                                                      //а после того как все команды буффера исполнятся будет взведён fence, означающий, что буффер пуст
+        VkPresentInfoKHR presentInfo = {};                                                                      //Р° РїРѕСЃР»Рµ С‚РѕРіРѕ РєР°Рє РІСЃРµ РєРѕРјР°РЅРґС‹ Р±СѓС„С„РµСЂР° РёСЃРїРѕР»РЅСЏС‚СЃСЏ Р±СѓРґРµС‚ РІР·РІРµРґС‘РЅ fence, РѕР·РЅР°С‡Р°СЋС‰РёР№, С‡С‚Рѕ Р±СѓС„С„РµСЂ РїСѓСЃС‚
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
         presentInfo.waitSemaphoreCount = 1;
@@ -336,8 +336,8 @@ namespace sge {
 
         presentInfo.pImageIndices = imageIndex;
 
-        result = vkQueuePresentKHR(m_device.presentQueue(), &presentInfo);                                      //Отправляем изображение в очередь представления, причём очередь представления будет дожидаться
-                                                                                                                //завершение выполнения командного буффера (всех команд, что попали в вызов vkQueueSubmit)
+        result = vkQueuePresentKHR(m_device.presentQueue(), &presentInfo);                                      //РћС‚РїСЂР°РІР»СЏРµРј РёР·РѕР±СЂР°Р¶РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ РїСЂРµРґСЃС‚Р°РІР»РµРЅРёСЏ, РїСЂРёС‡С‘Рј РѕС‡РµСЂРµРґСЊ РїСЂРµРґСЃС‚Р°РІР»РµРЅРёСЏ Р±СѓРґРµС‚ РґРѕР¶РёРґР°С‚СЊСЃСЏ
+                                                                                                                //Р·Р°РІРµСЂС€РµРЅРёРµ РІС‹РїРѕР»РЅРµРЅРёСЏ РєРѕРјР°РЅРґРЅРѕРіРѕ Р±СѓС„С„РµСЂР° (РІСЃРµС… РєРѕРјР°РЅРґ, С‡С‚Рѕ РїРѕРїР°Р»Рё РІ РІС‹Р·РѕРІ vkQueueSubmit)
         m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;                                           
         return result;
     }
