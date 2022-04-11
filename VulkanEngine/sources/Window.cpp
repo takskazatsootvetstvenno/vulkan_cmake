@@ -1,6 +1,7 @@
 #include "Window.h"
 #include "GLFW/glfw3.h"
 #include "Logger.h"
+#include "VulkanHelpUtils.h"
 #include <cassert>
 namespace sge {
     Window::Window(int width, int height, std::string name) noexcept
@@ -32,7 +33,7 @@ namespace sge {
         auto result = glfwCreateWindowSurface(instance, m_pWindow, nullptr, surface);
         if (result != VK_SUCCESS)
         {
-            LOG_ERROR("Failed to create window surface!")
+            LOG_ERROR("Failed to create window surface!\nError= " << getErrorNameFromEnum(result) << " | " << result)
             assert(false);
         }
     }

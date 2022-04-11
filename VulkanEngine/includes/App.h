@@ -3,7 +3,7 @@
 #include "Device.h"
 #include "Renderer.h"
 #include "Pipeline.h"
-#include "model.h"
+#include "Model.h"
 #include "Camera.h"
 #include "Descriptors.h"
 #include <memory>

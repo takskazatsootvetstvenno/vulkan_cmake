@@ -2,7 +2,9 @@
 #include "SwapChain.h"
 #include <algorithm>
 #include <cassert>
+#include <limits>
 #include "Logger.h"
+#include "VulkanHelpUtils.h"
 #include <array>
 namespace sge {
     SwapChain::SwapChain(Device& deviceRef, VkExtent2D windowExtent)
@@ -178,7 +180,7 @@ namespace sge {
         auto result = vkCreateSwapchainKHR(m_device.device(), &createInfo, nullptr, &m_swapChain);
         if (result != VK_SUCCESS)
         {
-            LOG_ERROR("failed to create swap chain!")
+            LOG_ERROR("failed to create swap chain!\nError: "<< getErrorNameFromEnum(result) << " | " << result)
             assert(false);
         }
         vkGetSwapchainImagesKHR(m_device.device(), m_swapChain, &imageCount, nullptr);
@@ -208,7 +210,7 @@ namespace sge {
             auto result = vkCreateImageView(m_device.device(), &createInfo, nullptr, &m_swapChainImageViews[i]);
             if (result != VK_SUCCESS)
             {
-                LOG_ERROR("failed to create image views!")
+                LOG_ERROR("failed to create image views!\nError: " << getErrorNameFromEnum(result) << " | " << result)
                 assert(false);
             }
         }
@@ -258,7 +260,7 @@ namespace sge {
             auto result = vkCreateImageView(m_device.device(), &viewInfo, nullptr, &m_depthImageViews[i]);
             if (result != VK_SUCCESS)
             {
-                LOG_ERROR("failed to create texture image view!")
+                LOG_ERROR("failed to create texture image view!\nError: " << getErrorNameFromEnum(result) << " | " << result)
                 assert(false);
             }
         }
@@ -319,7 +321,7 @@ namespace sge {
         assert(result == VK_SUCCESS && "failed to submit draw command buffer!");                                
         if (result != VK_SUCCESS)
         {
-            LOG_ERROR("failed to submit draw command buffer!");
+            LOG_ERROR("failed to submit draw command buffer!\nError: " << getErrorNameFromEnum(result) << " | " << result)
             assert(false);
         }
         VkPresentInfoKHR presentInfo = {};                                                                      //а после того как все команды буффера исполнятся будет взведён fence, означающий, что буффер пуст
@@ -399,7 +401,7 @@ namespace sge {
         auto result = vkCreateRenderPass(m_device.device(), &renderPassInfo, nullptr, &m_renderPass);
         if (result != VK_SUCCESS)
         {
-            LOG_ERROR("failed to create render pass!");
+            LOG_ERROR("failed to create render pass!\nError: " << getErrorNameFromEnum(result) << " | " << result)
             assert(false);
         }
     }
@@ -426,7 +428,7 @@ namespace sge {
                 &m_swapChainFramebuffers[i]);
             if (result != VK_SUCCESS)
             {
-                LOG_ERROR("failed to create render pass!");
+                LOG_ERROR("failed to create framebuffer!\nError: " << getErrorNameFromEnum(result) << " | " << result)
                 assert(false);
             }
         }

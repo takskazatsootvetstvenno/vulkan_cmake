@@ -6,6 +6,7 @@
 #include "glm/glm.hpp"
 #include "GLFW/glfw3.h"
 #include "Logger.h"
+#include "VulkanHelpUtils.h"
 namespace sge {
 
     struct SimplePushConstantData {
@@ -58,7 +59,11 @@ namespace sge {
         allocInfo.commandPool = m_device.getCommandPool();
         allocInfo.commandBufferCount = static_cast<uint32_t>(m_commandBuffers.size());
         auto result = vkAllocateCommandBuffers(m_device.device(), &allocInfo, m_commandBuffers.data());
-
+        if (result != VK_SUCCESS)
+        {
+            LOG_ERROR("Failed to allocate command buffers!\nError: " << getErrorNameFromEnum(result) << " | " << result)
+                assert(false);
+        }
         if (m_device.enableValidationLayers()) {
             SetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(
                 m_device.getInstance(),
@@ -75,11 +80,6 @@ namespace sge {
                 };
                 SetDebugUtilsObjectNameEXT(m_device.device(), &cmd_buf);
             }
-        }
-        if (result != VK_SUCCESS)
-        {
-            LOG_ERROR("Failed to allocate command buffers!")
-            assert(false);
         }
        // for (uint32_t i = 0; i < m_commandBuffers.size(); ++i)
        //     recordCommandBuffer(i);
@@ -109,7 +109,7 @@ namespace sge {
         result = vkBeginCommandBuffer(commandBuffer, &beginInfo);
         if (result != VK_SUCCESS)
         {
-            LOG_ERROR("failed to begin recording command buffer!")
+            LOG_ERROR("failed to begin recording command buffer!\nError: " << getErrorNameFromEnum(result) << " | " << result)
             assert(false);
         }
         return commandBuffer;
@@ -126,7 +126,7 @@ namespace sge {
         
         if (auto result = vkEndCommandBuffer(commandBuffer); result != VK_SUCCESS)
         {
-            LOG_ERROR("Failed to record command buffer")
+            LOG_ERROR("Failed to record command buffer\nError: " << getErrorNameFromEnum(result) << " | " << result)
             assert(false);
         }
         if(auto result = m_swapChain->submitCommandBuffers(&commandBuffer, &m_currentImageIndex);
@@ -138,7 +138,7 @@ namespace sge {
         }
         else if(result != VK_SUCCESS)
         {
-            LOG_ERROR("failed to present swapChain image!")
+            LOG_ERROR("failed to present swapChain image!\nError: " << getErrorNameFromEnum(result) << " | " << result)
             assert(false);
         }
         m_isFrameStarted = false;

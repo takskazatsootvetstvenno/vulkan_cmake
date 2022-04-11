@@ -1,8 +1,9 @@
 #include "Pipeline.h"
-#include "model.h"
+#include "Model.h"
 
 #include <fstream>
 #include "Logger.h"
+#include "VulkanHelpUtils.h"
 #include <cassert>
 namespace sge {
 
@@ -127,7 +128,7 @@ namespace sge {
 			&m_graphicsPipeline);
 		if (result != VK_SUCCESS)
 		{
-			LOG_ERROR("failed to create graphics pipeline")
+			LOG_ERROR("failed to create graphics pipeline\nError: " << getErrorNameFromEnum(result) << " | " << result)
 			assert(false);
 		}
 		vkDestroyShaderModule(m_device.device(), vertShaderModule, nullptr);

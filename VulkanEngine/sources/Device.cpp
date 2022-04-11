@@ -1,4 +1,5 @@
 #include "Device.h"
+#include "VulkanHelpUtils.h"
 #include "GLFW/glfw3.h"
 #include <cassert>
 #include <vector>
@@ -206,12 +207,12 @@ namespace sge {
             createInfo.enabledLayerCount = 0;
         }
         auto result = vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device);
-        volkLoadDevice(m_device);   //only for one device!!!!!
         if (result != VK_SUCCESS)
         {
-            LOG_ERROR("Failed to create logical device!")
+            LOG_ERROR("Failed to create logical device!\nError: " << getErrorNameFromEnum(result) << " : " << result)
             assert(false);
         }
+        volkLoadDevice(m_device);   //only for one device!!!!!
         vkGetDeviceQueue(m_device, indices.graphicsFamily, 0, &m_graphicsQueue);
         vkGetDeviceQueue(m_device, indices.presentFamily, 0, &m_presentQueue);
     }
@@ -342,7 +343,7 @@ namespace sge {
         VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &m_instance);
         if (result != VK_SUCCESS)
         {
-            LOG_ERROR("Failed to create a vulkan instance");
+            LOG_ERROR("Failed to create a vulkan instance!\nError: "  << getErrorNameFromEnum(result) << " : " << result);
             assert(false);
         }
         volkLoadInstance(m_instance);
@@ -426,7 +427,7 @@ namespace sge {
         auto result = vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool);
         if (result != VK_SUCCESS)
         {
-            LOG_ERROR("failed to create command pool!");
+            LOG_ERROR("failed to create command pool!\nError: " << getErrorNameFromEnum(result) << " : " << result);
             assert(false);
         }
     }
@@ -516,7 +517,7 @@ namespace sge {
         auto result = vkCreateBuffer(m_device, &bufferInfo, nullptr, &buffer);
         if (result != VK_SUCCESS)
         {
-            LOG_ERROR("Failed to create vertex buffer");
+            LOG_ERROR("Failed to create vertex buffer!\nError: " << getErrorNameFromEnum(result) << " : " << result);
             assert(false);
         }   
         VkMemoryRequirements memRequirements;
@@ -529,7 +530,7 @@ namespace sge {
         result = vkAllocateMemory(m_device, &allocInfo, nullptr, &bufferMemory);
         if (result != VK_SUCCESS)
         {
-            LOG_ERROR("Failed to allocate vertex buffer memory");
+            LOG_ERROR("Failed to allocate vertex buffer memory!\nError: " << getErrorNameFromEnum(result) << " : " << result);
             assert(false);
         }
         vkBindBufferMemory(m_device, buffer, bufferMemory, 0);
@@ -560,7 +561,7 @@ namespace sge {
         auto createResult = CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debugMessenger);
         if (createResult != VK_SUCCESS)
         {
-            LOG_ERROR("failed to set up debug messenger!");
+            LOG_ERROR("failed to set up debug messenger!\nError: " << getErrorNameFromEnum(createResult) << " : " << createResult);
             assert(false);
         }
     }

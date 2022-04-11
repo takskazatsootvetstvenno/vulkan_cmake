@@ -20,7 +20,7 @@ namespace sge
 
 	void Camera::setPerspectiveProjection(float fovy, float aspect, float near, float far)
 	{
-		assert(glm::abs(aspect - std::numeric_limits<float>::epsilon()) > 0.0f);
+		//assert(glm::abs(aspect - std::numeric_limits<float>::epsilon()) > 0.0f);
 		const float tanHalfFovy = tan(fovy / 2.f);
 		m_projectionMatrix = glm::mat4{ 0.0f };
 		m_projectionMatrix[0][0] = 1.f / (aspect * tanHalfFovy);

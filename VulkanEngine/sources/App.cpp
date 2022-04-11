@@ -10,10 +10,12 @@
 #include "glm/glm.hpp"
 #include "GLFW/glfw3.h"
 #include "Buffer.h"
+#include "VulkanHelpUtils.h"
 #include <vector>
 #include <chrono>
 #include <numeric>
 #include <iterator>
+
 namespace sge {
     App::App()
     {
@@ -24,8 +26,6 @@ namespace sge {
             .setMaxSets(1000)
             .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000)
             .build());
-
-       
 
         mgr.m_generalMatrixUBO = std::make_unique<Buffer>(
                 m_device,
@@ -150,7 +150,12 @@ namespace sge {
         pipelineLayoutInfo.pPushConstantRanges = nullptr;
         auto result = vkCreatePipelineLayout(m_device.device(), &pipelineLayoutInfo, nullptr,
             &pipelineLayout);
-        assert(result == VK_SUCCESS && "failed to create pipeline layout!");
+        if (result != VK_SUCCESS)
+        {
+            LOG_ERROR("failed to create pipeline layout\nError: " << getErrorNameFromEnum(result) << " | " << result)
+            assert(false);
+        }
+        
     }
 
     void App::loadModels(std::vector<Mesh>&& meshess)

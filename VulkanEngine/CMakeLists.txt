@@ -19,6 +19,7 @@ set(CORE_INCLUDES
 	includes/Mesh.h
 	includes/Descriptors.h
 	includes/MeshMGR.h	
+	includes/VulkanHelpUtils.h
 )
 set(CORE_SOURCES
 	sources/Renderer.cpp
