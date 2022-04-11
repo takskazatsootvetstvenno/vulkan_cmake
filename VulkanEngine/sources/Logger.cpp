@@ -30,6 +30,11 @@ namespace sge {
 		out_stream << buf << m_ss.rdbuf() << "\n";
 		m_ss.str("");
 	}
+	void Logger::flush() noexcept
+	{
+		std::cout << std::endl;
+		out_stream << std::endl;
+	}
 	Logger::~Logger()
 	{
 		out_stream.close();

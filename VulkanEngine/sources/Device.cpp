@@ -129,12 +129,12 @@ namespace sge {
             vkGetPhysicalDeviceProperties(device, &deviceProperties);
             uint32_t extensionCount;
             vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-            std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+            m_availableExtensions.resize(extensionCount);
             vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
-                                                 availableExtensions.data());
+                                                 m_availableExtensions.data());
             bool ExtFound = false;
             for (auto& reqExt : m_deviceExtensions) {
-                for (auto& ext : availableExtensions)
+                for (auto& ext : m_availableExtensions)
                     if (strncmp(ext.extensionName, reqExt, 30) == 0) {
                         ExtFound = true;
                         break;
@@ -207,10 +207,18 @@ namespace sge {
             LOG_MSG("Vulkan started without validation levels");
             createInfo.enabledLayerCount = 0;
         }
+
         auto result = vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device);
         if (result != VK_SUCCESS)
         {
-            LOG_ERROR("Failed to create logical device!\nError: " << getErrorNameFromEnum(result) << " : " << result)
+            LOG_ERROR("Failed to create logical device!\nError: " << getErrorNameFromEnum(result) << " : " << result << "\n")
+                LOG_MSG("All available device extensions:\n")
+                for (auto device_extenstion : m_availableExtensions)
+                    LOG_MSG(device_extenstion.extensionName << " Version: " << device_extenstion.specVersion)
+                LOG_MSG("Requested extensions:\n")
+                for (auto extenstion : m_deviceExtensions)
+                    LOG_MSG(extenstion)
+                LOG_MSG_FLUSH
             assert(false);
         }
         volkLoadDevice(m_device);   //only for one device!!!!!

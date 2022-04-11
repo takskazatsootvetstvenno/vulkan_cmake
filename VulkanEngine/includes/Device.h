@@ -81,7 +81,8 @@ namespace sge {
         bool m_enableValidationLayers = true;
         const std::vector<const char*> m_validationLayers = {"VK_LAYER_KHRONOS_validation"};
         const std::vector<const char*> m_validationInstanceExtensions = { VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
-        const std::vector<const char*> m_deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME, "VK_KHR_synchronization2"};
+        const std::vector<const char*> m_deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };//"VK_KHR_synchronization2"
+        std::vector<VkExtensionProperties> m_availableExtensions;
     };
 
 }  // namespace sge

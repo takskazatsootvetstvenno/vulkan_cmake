@@ -13,6 +13,7 @@ namespace sge {
 		[[nodiscard]] std::stringstream& log() noexcept;
 		void flush_error() noexcept;
 		void flush_info() noexcept;
+		void flush() noexcept;
 		static Logger& Instance() noexcept;
 	private:
 		Logger();
@@ -21,4 +22,5 @@ namespace sge {
 	};
 #define LOG_ERROR(...) {sge::Logger::Instance().log() << "In file: "<< __FILE__ << ", in line " << __LINE__ << ": " <<  __VA_ARGS__; sge::Logger::Instance().flush_error();}
 #define LOG_MSG(...)   {sge::Logger::Instance().log() <<  __VA_ARGS__; sge::Logger::Instance().flush_info();}
+#define LOG_MSG_FLUSH  {sge::Logger::Instance().flush();}
 }
