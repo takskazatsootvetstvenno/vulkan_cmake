@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_set>
 #include <set>
+#include <cstring>
 #include <Logger.h>
 #ifdef _WIN32
 #include <Windows.h>
