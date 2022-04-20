@@ -1,4 +1,5 @@
 #pragma once
+#include "Event.h"
 #include "Window.h"
 #include "Device.h"
 #include "Renderer.h"
@@ -13,6 +14,7 @@ namespace sge {
     {
         glm::mat4 projection{ 1.f };
         glm::mat4 view{ 1.f };
+        glm::vec3 cameraPosition{ 0.f };
     };
 
     struct PBRUbo
@@ -37,12 +39,13 @@ namespace sge {
         void createPipeline(VkPipelineLayout& pipelineLayout, std::unique_ptr<Pipeline>& pipeline) noexcept;
         void createPipeLineLayout(VkDescriptorSetLayout globalSetLayout, VkPipelineLayout& pipelineLayout) noexcept;
         void renderObjects(VkCommandBuffer commandBuffer) noexcept;
-        void keyboardProcess() noexcept;
+        void initEvents() noexcept;
         Window m_window{800, 600, "vulkan_window"};
         Device m_device{m_window};
         Renderer m_renderer{ m_window, m_device };
         std::unique_ptr<Model> m_model;
         Camera m_camera;
+        EventDispatcher m_eventDispatcher;
     };
 
 } 

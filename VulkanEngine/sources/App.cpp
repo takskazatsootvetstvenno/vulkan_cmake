@@ -20,11 +20,12 @@ namespace sge {
     App::App()
     {
         m_camera.setViewCircleCamera(15.f, 5.f);
-        m_camera.setPerspectiveProjection(glm::radians(90.f), static_cast<float>(m_window.getExtent().width) / m_window.getExtent().height, 0.1f, 100.f);
+        m_camera.setPerspectiveProjection(glm::radians(m_camera.getZoom()), static_cast<float>(m_window.getExtent().width) / m_window.getExtent().height, 0.1f, 100.f);
+        initEvents();
         auto& mgr = MeshMGR::Instance();
         mgr.setDescriptorPool(DescriptorPool::Builder(m_device)
-            .setMaxSets(1000)
-            .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000)
+            .setMaxSets(1024)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1024)
             .build());
 
         mgr.m_generalMatrixUBO = std::make_unique<Buffer>(
@@ -82,32 +83,51 @@ namespace sge {
             m_model->draw(commandBuffer, mesh);
         }    
     }
-    void App::keyboardProcess() noexcept //TO DO remove this...
+
+    void App::initEvents() noexcept
     {
-        static auto old_time = std::chrono::steady_clock::now();
-        auto new_time = std::chrono::steady_clock::now();
-        if (std::chrono::duration_cast<std::chrono::milliseconds>(new_time - old_time).count() > 10) {
-            if (m_window.getLastKeyInfo().key_space_pressed) {
-                m_camera.loadDefaultCircleCamera();
-                m_window.getLastKeyInfo().key_space_pressed = false;
-            }
-            if (m_window.getLastKeyInfo().key_E_pressed)
-                m_camera.changeCirclePos(1.f * 3.141592f / 180.f);
-            if (m_window.getLastKeyInfo().key_Q_pressed)
-                m_camera.changeCirclePos(-1.f * 3.141592f / 180.f);
-            if (m_window.getLastKeyInfo().key_W_pressed)
-                m_camera.changeCircleHeight(0.5f);
-            if (m_window.getLastKeyInfo().key_S_pressed)
-                m_camera.changeCircleHeight(-0.5f);
-            if (m_window.getLastKeyInfo().scroll_direction != 0)
+        m_eventDispatcher.add_event_listener <EventKeyPressed>(
+            [&](EventKeyPressed& event)
             {
-                m_camera.changeZoom(m_window.getLastKeyInfo().scroll_direction);
-                m_window.getLastKeyInfo().scroll_direction = 0;
-                m_window.getLastKeyInfo().scroll = 0;
+                switch (event.key)
+                {
+                case 69:	//E
+                    m_camera.changeCirclePos(5.f * 3.141592f / 180.f);
+                    break;
+                case 83:	//S
+                    m_camera.changeCircleHeight(-1.f);
+                    break;
+                case 87:	//W
+                    m_camera.changeCircleHeight(1.f);
+                    break;
+                case 81:	//Q
+                    m_camera.changeCirclePos(-5.f * 3.141592f / 180.f);
+                    break;
+                case 256:	//GLFW_KEY_ESCAPE
+                    m_window.closeWindow();
+                    break;
+                }
             }
-            m_camera.setPerspectiveProjection(glm::radians(m_camera.getZoom()), static_cast<float>(m_window.getExtent().width) / m_window.getExtent().height, 0.1f, 100.f);
-            old_time = new_time;
-        }
+        );
+        m_eventDispatcher.add_event_listener <EventScroll>(
+            [&](EventScroll& event)
+            {
+                m_camera.changeZoom(static_cast<float>(-event.y * 2));
+                m_camera.setPerspectiveProjection(glm::radians(m_camera.getZoom()), static_cast<float>(m_window.getExtent().width) / m_window.getExtent().height, 0.1f, 100.f);
+            }
+        );
+        m_eventDispatcher.add_event_listener <EventWindowResize>(
+            [&](EventWindowResize& event)
+            {
+                m_camera.setPerspectiveProjection(glm::radians(m_camera.getZoom()), static_cast<float>(m_window.getExtent().width) / m_window.getExtent().height, 0.1f, 100.f);
+            }
+        );
+        m_window.set_event_callback(
+            [&](BaseEvent& event)
+            {
+                m_eventDispatcher.dispatch(event);
+            }
+        );
     }
     void App::run() {
         auto& mgr = MeshMGR::Instance();
@@ -120,11 +140,9 @@ namespace sge {
                 GlobalUbo ubo{};
                 ubo.projection = m_camera.getProjection();
                 ubo.view = m_camera.getView();
+                ubo.cameraPosition = m_camera.getCameraPos();
                 mgr.m_generalMatrixUBO->writeToBuffer(&ubo);
                 mgr.m_generalMatrixUBO->flush();
-                
-                //update keyboard
-                keyboardProcess();
 
                 //render
                 m_renderer.beginSwapChainRenderPass(commandBuffer);
@@ -203,8 +221,8 @@ namespace sge {
             ubo.modelMatrix = mesh.getModelMatrix();
             ubo.lightDirection = glm::vec4(1.f, 0.f, 0.f, 0.f);
             ubo.baseColor = mesh.m_material.m_baseColor;
-            ubo.metallic = mesh.m_material.m_metallic;
-            ubo.roughness = mesh.m_material.m_roughness;
+            ubo.metallic = mesh.m_material.m_metallicFactor;
+            ubo.roughness = mesh.m_material.m_roughnessFactor;
             auto& buffer = mgr.m_sets[mesh.getDescriptorSetId()].uboBuffer;
             buffer->writeToBuffer(&ubo);
             buffer->flush();

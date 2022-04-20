@@ -14,6 +14,7 @@ namespace sge {
     struct Vertex {
         glm::vec3 m_position;
         glm::vec3 m_normal;
+        glm::vec2 m_UV;
         static std::vector<VkVertexInputBindingDescription> getBindingDescription() noexcept;
         static std::vector<VkVertexInputAttributeDescription> getAttributeDescription() noexcept;
     };
@@ -22,9 +23,25 @@ namespace sge {
     public:
         struct Material
         {
-            float     m_metallic = 0.f;
-            float     m_roughness = 0.f;
             glm::vec4 m_baseColor{ 1.f };
+            glm::vec3 m_emissiveFactor{ 1.f };
+            float     m_metallicFactor = 0.f;
+            float     m_roughnessFactor = 0.f;
+
+            bool      m_hasColorMap = false;
+            bool      m_hasMetallicRoughnessMap = false;
+            bool      m_hasNormalMap = false;
+            bool      m_hasEmissiveMap= false;
+
+            std::string m_baseColorPath;
+            std::string m_MetallicRoughnessPath;
+            std::string m_NormalPath;
+            std::string m_EmissivePath;
+        };
+
+        enum class MaterialType {
+            PBR,
+            Phong
         };
 
         Mesh()  = default;
@@ -48,6 +65,7 @@ namespace sge {
         uint32_t  m_pipelineId = 0;
         uint32_t  m_descriptorSetId = 0;
         Material  m_material;
+        MaterialType m_materialType{MaterialType::Phong};
     private:
         glm::mat4 m_modelMatrix{ 1.f };
     };

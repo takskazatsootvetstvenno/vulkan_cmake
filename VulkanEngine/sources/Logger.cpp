@@ -32,8 +32,8 @@ namespace sge {
 	}
 	void Logger::flush() noexcept
 	{
-		std::cout << std::endl;
-		out_stream << std::endl;
+		std::cout << std::flush;
+		out_stream << std::flush;
 	}
 	Logger::~Logger()
 	{

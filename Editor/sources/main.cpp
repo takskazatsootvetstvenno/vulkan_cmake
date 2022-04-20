@@ -19,7 +19,6 @@ constexpr glm::mat4 convertMatrix(const aiMatrix4x4& aiMat) noexcept {
 }
 
 void processMesh(aiMesh* aiMesh, const aiScene* scene, std::vector<sge::Mesh>& meshes, glm::mat4 posMat) {
-    //TO DO -> get info from mesh
     sge::Mesh mesh;
     mesh.m_pos.resize(aiMesh->mNumVertices);
 
@@ -28,20 +27,71 @@ void processMesh(aiMesh* aiMesh, const aiScene* scene, std::vector<sge::Mesh>& m
     for (unsigned int i = 0; i < aiMesh->mNumVertices; ++i) {
         mesh.m_pos[i].m_position = { aiMesh->mVertices[i].x, aiMesh->mVertices[i].y, aiMesh->mVertices[i].z };
         mesh.m_pos[i].m_normal = { aiMesh->mNormals[i].x, aiMesh->mNormals[i].y, aiMesh->mNormals[i].z };
-        //if (aiMesh->mTextureCoords[0] != nullptr) {
-        //    mesh.m_pos[i].m_uv = { aiMesh->mTextureCoords[0][i].x, aiMesh->mTextureCoords[0][i].y };
-        //}
+        if (aiMesh->mTextureCoords[0] != nullptr) {
+            mesh.m_pos[i].m_UV = { aiMesh->mTextureCoords[0][i].x, aiMesh->mTextureCoords[0][i].y };
+        }
     }
     for (unsigned int i = 0; i < aiMesh->mNumFaces; i++) {
         aiFace face = aiMesh->mFaces[i];
         for (unsigned int j = 0; j < face.mNumIndices; j++)  
             mesh.m_ind.push_back(face.mIndices[j]); 
     }
+
+    ai_material->Get(AI_MATKEY_METALLIC_FACTOR, mesh.m_material.m_metallicFactor);
+    ai_material->Get(AI_MATKEY_ROUGHNESS_FACTOR, mesh.m_material.m_roughnessFactor);
+    ai_material->Get(AI_MATKEY_EMISSIVE_INTENSITY, mesh.m_material.m_emissiveFactor);
+
     aiColor3D baseColor;
-    scene->mMaterials[aiMesh->mMaterialIndex]->Get(AI_MATKEY_METALLIC_FACTOR, mesh.m_material.m_metallic);
-    scene->mMaterials[aiMesh->mMaterialIndex]->Get(AI_MATKEY_ROUGHNESS_FACTOR, mesh.m_material.m_roughness);
-    scene->mMaterials[aiMesh->mMaterialIndex]->Get(AI_MATKEY_BASE_COLOR, baseColor);
-    mesh.m_material.m_baseColor = glm::vec4{ baseColor[0],baseColor[1],baseColor[2], 1.f };
+    ai_material->Get(AI_MATKEY_BASE_COLOR, baseColor);
+    mesh.m_material.m_baseColor = glm::vec4{ baseColor[0], baseColor[1], baseColor[2], 1.f };
+
+    aiColor3D emissiveFactor;
+    ai_material->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveFactor);
+    mesh.m_material.m_emissiveFactor = glm::vec3{ emissiveFactor[0], emissiveFactor[1], emissiveFactor[2]};
+
+    mesh.m_material.m_hasColorMap = ai_material->GetTextureCount(aiTextureType_BASE_COLOR);
+    mesh.m_material.m_hasMetallicRoughnessMap = ai_material->GetTextureCount(aiTextureType_LIGHTMAP); //it is MetallicRoughnessMap
+    mesh.m_material.m_hasEmissiveMap = ai_material->GetTextureCount(aiTextureType_EMISSIVE);
+    mesh.m_material.m_hasNormalMap = ai_material->GetTextureCount(aiTextureType_NORMALS);
+    
+        aiString str1;
+    ai_material->GetTexture(aiTextureType_LIGHTMAP, 0, &str1);
+
+    if (mesh.m_material.m_hasColorMap) {
+        aiString str;
+        ai_material->GetTexture(aiTextureType_BASE_COLOR, 0, &str);
+        mesh.m_material.m_baseColorPath = str.C_Str();
+    }
+    if (mesh.m_material.m_hasMetallicRoughnessMap) {
+        aiString str;
+        ai_material->GetTexture(aiTextureType_LIGHTMAP, 0, &str);
+        mesh.m_material.m_MetallicRoughnessPath = str.C_Str();
+    }
+    if (mesh.m_material.m_hasEmissiveMap) {
+        aiString str;
+        ai_material->GetTexture(aiTextureType_EMISSIVE, 0, &str);
+        mesh.m_material.m_EmissivePath = str.C_Str();
+    }
+    if (mesh.m_material.m_hasNormalMap) {
+        aiString str;
+        ai_material->GetTexture(aiTextureType_NORMALS, 0, &str);
+        mesh.m_material.m_NormalPath = str.C_Str();
+    }
+
+    aiShadingMode mode;
+    ai_material->Get(AI_MATKEY_SHADING_MODEL, mode);
+    switch (mode)
+    {
+    case aiShadingMode_Phong:
+        mesh.m_materialType = sge::Mesh::MaterialType::Phong;
+        break;
+    case aiShadingMode_PBR_BRDF:
+        mesh.m_materialType = sge::Mesh::MaterialType::PBR;
+        break;
+    default:
+        LOG_ERROR("Model loading: Unsupported shading model!");
+        break;
+    }
     mesh.setModelMatrix(std::move(posMat));
     meshes.push_back(std::move(mesh));
 }
@@ -57,7 +107,7 @@ void processNode(aiNode* node, const aiScene* scene, std::vector<sge::Mesh>& mes
     }
 }
 
-void load_model(sge::App& app, const std::string_view path)
+void load_model(sge::App& app, const std::string_view path, const glm::mat4 rootMatrix = glm::mat4{1.f})
 {
     Assimp::Importer importer;
     auto scene = importer.ReadFile(path.data(), aiProcess_Triangulate);
@@ -71,7 +121,7 @@ void load_model(sge::App& app, const std::string_view path)
     }
   
     std::vector<sge::Mesh> meshes;
-    auto m = glm::rotate(glm::mat4{ 1.f }, glm::radians(180.f), glm::vec3{ 1.f,0.f,0.f });
+    const auto m = rootMatrix * (glm::rotate(glm::mat4{ 1.f }, glm::radians(180.f), glm::vec3{ 1.f,0.f,0.f }));
     processNode(scene->mRootNode, scene, meshes, m);
     app.loadModels(std::move(meshes));
 }
@@ -79,8 +129,12 @@ void load_model(sge::App& app, const std::string_view path)
 int main() {
     sge::App my_app;
     load_model(my_app, "METAL_SPHERES.gltf");
-    //load_model(my_app, "MetalRoughSpheresNoTextures.gltf");
-    //load_model(my_app, "CUBE_TEST.gltf");
+    /*load_model(my_app,
+        "WaterBottle.gltf",
+        glm::translate(glm::mat4{ 1.f },
+        glm::vec3{ -1.f,0.f,0.f })
+    );
+    */
     my_app.run();
     return 0;
 }

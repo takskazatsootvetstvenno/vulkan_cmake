@@ -46,11 +46,17 @@ namespace sge
 		setViewCircleCamera(20.f, 5.f);
 	}
 
+	const glm::vec3 Camera::getCameraPos() const noexcept
+	{
+		return m_cameraPos;
+	}
+
 	const glm::mat4& Camera::getProjection() const
 	{
 		return m_projectionMatrix;
 	}
 	void Camera::setViewDirection(glm::vec3 position, glm::vec3 direction, glm::vec3 up) {
+		m_cameraPos = position;
 		const glm::vec3 w{ glm::normalize(direction) };
 		const glm::vec3 u{ glm::normalize(glm::cross(w, up)) };
 		const glm::vec3 v{ glm::cross(w, u) };

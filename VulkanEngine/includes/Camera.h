@@ -21,12 +21,14 @@ namespace sge {
 		void changeCircleHeight(float add_value);
 		void changeZoom(float add_value);
 		void loadDefaultCircleCamera();
+		const glm::vec3 getCameraPos() const noexcept;
 		const glm::mat4& getProjection() const;
 		const glm::mat4& getView() const;
 		const float getZoom() const;
 	private:
 		glm::mat4 m_projectionMatrix{ 1.f };
 		glm::mat4 m_viewMatrix{ 1.f };
+		glm::vec3 m_cameraPos{ 0.f };
 		float m_circle_pos = 0.f;
 		float m_circle_radius = 1.f;
 		float m_circle_height = 0.f;

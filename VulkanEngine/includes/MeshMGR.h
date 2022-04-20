@@ -4,6 +4,7 @@
 #include "Descriptors.h"
 #include <vector>
 #include <memory>
+
 namespace sge {
 	struct DescriptorSetInfo
 	{
