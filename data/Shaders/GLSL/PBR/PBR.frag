@@ -8,6 +8,7 @@ layout (location = 0) out vec4 outColor;
 layout(set = 0, binding = 1) uniform MeshUbo
 {
 	mat4 modelMatrix;
+	mat3 normalMatrix;
 	vec4 baseColor;
     vec4 lightDirection;
 	float metallic;
@@ -16,6 +17,7 @@ layout(set = 0, binding = 1) uniform MeshUbo
 
 const float M_PI = 3.141592653589793;
 const vec3 lightPoint = vec3(1.f,-2.f,1.f);
+const float gamma = 2.2f;
 
 vec3 fDiffuse(const vec3 surfaceColor)
 {
@@ -83,15 +85,6 @@ void main() {
 	const vec3 diffuseContrib = (1.0 - F) * fDiffuse(diffuseColor);
 	const vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);
 	const vec3 color = (diffuseContrib + specContrib) * getPointLightColor() * NdotL;   
-	//vec3 color = (diffuseContrib + specContrib) * u_LightColor * NdotL;   
-	// color += IBL(...);
-	/*
-	float diffuse = max(dot(N, L), 0.f);
 
-	vec3 reflectDir = reflect(-L, N);  
-	float spec = pow(max(dot(V, reflectDir), 0.0), 32);
-
-	outColor = (0.1f + diffuse + spec) * localUBO.baseColor;
-	*/
-	outColor = vec4(color, 1.f);
+	outColor = vec4(pow(color, vec3(1.f/gamma)), 1.f);
 }

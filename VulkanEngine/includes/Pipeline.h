@@ -1,7 +1,9 @@
  #pragma once
 #include "Device.h"
+#include "Shader.h"
 #include <string>
 namespace sge {
+    class Shader;
 	struct PipelineConfigInfo {
 		PipelineConfigInfo() = default;
         PipelineConfigInfo(const PipelineConfigInfo&) = delete;
@@ -27,20 +29,21 @@ namespace sge {
 	class Pipeline
 	{
     public:
-        Pipeline(Device& device, const std::string_view vertFilePath, const std::string_view fragFilePath, const PipelineConfigInfo& configInfo);
+        Pipeline(Device& device, Shader&& shader, const PipelineConfigInfo& configInfo);
         Pipeline(const Pipeline&) = delete;
         Pipeline& operator=(const Pipeline&) = delete;
         Pipeline(Pipeline&&) = delete;
         Pipeline& operator=(Pipeline&&) = delete;
         ~Pipeline();
 
-        std::string readFile(const std::string_view filepath);
-        void crateGraphicsPipeline(const std::string_view vertFilePath, const std::string_view fragFilePath, const PipelineConfigInfo& configInfo);
+        const Shader& getShader() const noexcept;
+        void crateGraphicsPipeline(const PipelineConfigInfo& configInfo);
         void bind(VkCommandBuffer commandBuffer) const noexcept;
         static PipelineConfigInfo createDefaultPipeline(uint32_t width, uint32_t height);
         VkShaderModule createShaderModule(const std::string& code);
     private:
         Device& m_device;
+        Shader m_shader;
         VkPipeline m_graphicsPipeline;
 	};
 }

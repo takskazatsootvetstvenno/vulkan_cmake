@@ -25,6 +25,7 @@ namespace sge {
 		MeshMGR(MeshMGR&&) = delete;
 		MeshMGR& operator=(const MeshMGR&) = delete;
 		MeshMGR& operator=(MeshMGR&&) = delete;
+
 		static MeshMGR& Instance() noexcept;
 		void setDescriptorPool(std::unique_ptr<DescriptorPool>&& uptr_descriptor_pool) noexcept;
 		void clearTable() noexcept;

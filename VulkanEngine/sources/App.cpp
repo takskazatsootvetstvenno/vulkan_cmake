@@ -15,7 +15,7 @@
 #include <chrono>
 #include <numeric>
 #include <iterator>
-
+#include "Shader.h"
 namespace sge {
     App::App()
     {
@@ -44,11 +44,30 @@ namespace sge {
 
         VkPipelineLayout pipelineLayout;
         createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayout);
-        
-        mgr.m_pipelines.emplace_back(
-            pipelineLayout
-        );
-        createPipeline(pipelineLayout, mgr.m_pipelines[0].pipeline);
+
+        VkPipelineLayout pipelineLayoutGLSLPhong;
+        createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayoutGLSLPhong);
+
+        VkPipelineLayout pipelineLayoutHLSLPhong;
+        createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayoutHLSLPhong);
+
+        VkPipelineLayout pipelineLayoutHLSLPBR;
+        createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayoutHLSLPBR);
+
+        //GLSL
+        mgr.m_pipelines.emplace_back(pipelineLayout);
+        createPipeline(pipelineLayout, mgr.m_pipelines[0].pipeline, Shader("Shaders/GLSL/PBR/PBR.vert.spv", "Shaders/GLSL/PBR/PBR.frag.spv"));
+
+        mgr.m_pipelines.emplace_back(pipelineLayoutGLSLPhong);
+        createPipeline(pipelineLayoutGLSLPhong, mgr.m_pipelines[1].pipeline, Shader("Shaders/GLSL/Phong/phong.vert.spv", "Shaders/GLSL/Phong/phong.frag.spv"));
+
+        //HLSL
+        mgr.m_pipelines.emplace_back(pipelineLayoutHLSLPhong);
+        createPipeline(pipelineLayoutHLSLPhong, mgr.m_pipelines[2].pipeline, Shader("Shaders/HLSL/Phong/phong.vert.spv", "Shaders/HLSL/Phong/phong.frag.spv"));
+
+        //HLSL
+        mgr.m_pipelines.emplace_back(pipelineLayoutHLSLPBR);
+        createPipeline(pipelineLayoutHLSLPhong, mgr.m_pipelines[3].pipeline, Shader("Shaders/HLSL/PBR/PBR.vert.spv", "Shaders/HLSL/PBR/PBR.frag.spv"));
     }
 
     App::~App()
@@ -93,6 +112,25 @@ namespace sge {
                 {
                 case 69:	//E
                     m_camera.changeCirclePos(5.f * 3.141592f / 180.f);
+
+                    break;
+                case 71:	//G
+                    if (event.action == 0){
+                        auto& mgr = MeshMGR::Instance();
+                        auto numOfPipelines = mgr.m_pipelines.size();
+                        static int current_pipeline = 0;
+                        if (numOfPipelines < 2) break;
+                        std::swap(
+                            mgr.m_pipelines[current_pipeline % numOfPipelines],
+                            mgr.m_pipelines[0]
+                        );
+                        std::swap(
+                            mgr.m_pipelines[0],
+                            mgr.m_pipelines[(current_pipeline+1) % numOfPipelines]
+                        );
+                        (++current_pipeline) %= numOfPipelines;
+                        LOG_MSG("Pipeline: " << current_pipeline<< mgr.m_pipelines[0].pipeline->getShader().getFragmentShaderPath());
+                     }
                     break;
                 case 83:	//S
                     m_camera.changeCircleHeight(-1.f);
@@ -151,7 +189,11 @@ namespace sge {
                 if (m_renderer.endFrame() == true)
                     for (auto& pipeline : mgr.m_pipelines)
                     {
-                        createPipeline(pipeline.pipelineLayout, pipeline.pipeline);
+                        Shader prevShader(
+                            pipeline.pipeline->getShader().getVertexShaderPath(),
+                            pipeline.pipeline->getShader().getFragmentShaderPath()
+                        );
+                        createPipeline(pipeline.pipelineLayout, pipeline.pipeline, std::move(prevShader));
                     }
             }
         }
@@ -191,7 +233,7 @@ namespace sge {
                 1,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-                );
+            );
             uboBuffer->map();
 
             auto descriptorLayout = DescriptorSetLayout::Builder(m_device)
@@ -219,6 +261,7 @@ namespace sge {
             //update
             PBRUbo ubo{};
             ubo.modelMatrix = mesh.getModelMatrix();
+            ubo.normalMatrix = glm::transpose(glm::inverse(mesh.getModelMatrix()));
             ubo.lightDirection = glm::vec4(1.f, 0.f, 0.f, 0.f);
             ubo.baseColor = mesh.m_material.m_baseColor;
             ubo.metallic = mesh.m_material.m_metallicFactor;
@@ -230,7 +273,7 @@ namespace sge {
         m_model = std::make_unique<Model>(m_device);
     }
 
-    void App::createPipeline(VkPipelineLayout& pipelineLayout, std::unique_ptr<Pipeline>& pipeline) noexcept{
+    void App::createPipeline(VkPipelineLayout& pipelineLayout, std::unique_ptr<Pipeline>& pipeline, Shader&& shader) noexcept{
         assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
 
         auto pipeline_config = Pipeline::createDefaultPipeline(m_window.getExtent().width,
@@ -239,8 +282,7 @@ namespace sge {
         pipeline_config.pipelineLayout = pipelineLayout;
         pipeline = std::make_unique<Pipeline>(
             m_device,
-            "Shaders/vertex.vert.spv",
-            "Shaders/fragment.frag.spv",
+            std::move(shader),
             pipeline_config);
         LOG_MSG("New Pipeline has been created!");
     }

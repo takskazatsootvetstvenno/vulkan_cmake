@@ -16,6 +16,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo
 layout(set = 0, binding = 1) uniform MeshUbo
 {
 	mat4 modelMatrix;
+	mat3 normalMatrix;
 	vec4 baseColor;
     vec4 lightDirection;
 	float metallic;
@@ -23,7 +24,7 @@ layout(set = 0, binding = 1) uniform MeshUbo
 } localUBO;
 
 void main(){
-	norm_out = normalize(transpose(inverse(mat3(localUBO.modelMatrix))) * normal_in); //(M^-1)^T
+	norm_out = normalize(localUBO.normalMatrix * normal_in); //(M^-1)^T
 	cameraPosition_out = globalUBO.cameraPosition;
 	worldPos_out = vec3(localUBO.modelMatrix * vec4(position_in, 1.0));
 	gl_Position = globalUBO.projectionMatrix * globalUBO.viewMatrix * localUBO.modelMatrix * vec4(position_in, 1.0);

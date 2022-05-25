@@ -20,6 +20,7 @@ namespace sge {
     struct PBRUbo
     {
         glm::mat4 modelMatrix{ 1.f };
+        glm::mat3 normalMatrix{ 1.f };
         glm::vec4 baseColor{ 1.f };
         glm::vec4 lightDirection{ 0.f }; //alignas(16)
         float metallic = 0.f;
@@ -36,7 +37,8 @@ namespace sge {
         void run();
         void loadModels(std::vector<Mesh>&& meshes);
     private:
-        void createPipeline(VkPipelineLayout& pipelineLayout, std::unique_ptr<Pipeline>& pipeline) noexcept;
+
+        void createPipeline(VkPipelineLayout& pipelineLayout, std::unique_ptr<Pipeline>& pipeline, Shader&& shader) noexcept;
         void createPipeLineLayout(VkDescriptorSetLayout globalSetLayout, VkPipelineLayout& pipelineLayout) noexcept;
         void renderObjects(VkCommandBuffer commandBuffer) noexcept;
         void initEvents() noexcept;

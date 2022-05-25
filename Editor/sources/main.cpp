@@ -130,7 +130,7 @@ int main() {
     sge::App my_app;
     load_model(my_app, "METAL_SPHERES.gltf");
     /*load_model(my_app,
-        "WaterBottle.gltf",
+        "Models/WaterBottle/WaterBottle.gltf",
         glm::translate(glm::mat4{ 1.f },
         glm::vec3{ -1.f,0.f,0.f })
     );

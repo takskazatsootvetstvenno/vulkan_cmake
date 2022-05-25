@@ -1,40 +1,28 @@
 #include "Pipeline.h"
 #include "Model.h"
 
-#include <fstream>
 #include "Logger.h"
 #include "VulkanHelpUtils.h"
 #include <cassert>
 namespace sge {
 
-	Pipeline::Pipeline(Device& device, const std::string_view vertFilePath, const std::string_view fragFilePath, const PipelineConfigInfo& configInfo)
-		:m_device(device) {
-		crateGraphicsPipeline(vertFilePath, fragFilePath, configInfo);
+	Pipeline::Pipeline(Device& device, Shader&& shader, const PipelineConfigInfo& configInfo)
+		:m_device(device), m_shader(std::move(shader)){
+		crateGraphicsPipeline(configInfo);
 	}
 
-	std::string Pipeline::readFile(const std::string_view filepath)
+	const Shader& Pipeline::getShader() const noexcept
 	{
-		std::ifstream file(filepath.data(), std::ios::ate | std::ios::binary);
-		if (!file.is_open())
-		{
-			LOG_ERROR("Failed to open file: " << filepath << "!")
-			assert(false);
-		}
-		size_t fileSize = static_cast<size_t>(file.tellg());
-		std::string buffer; buffer.resize(fileSize);
-		file.seekg(0);
-		file.read(buffer.data(), fileSize);
-		file.close();
-		return buffer;
+		return m_shader;
 	}
 
-	void Pipeline::crateGraphicsPipeline(const std::string_view vertFilePath, const std::string_view fragFilePath, const PipelineConfigInfo& configInfo)
+	void Pipeline::crateGraphicsPipeline(const PipelineConfigInfo& configInfo)
 	{
 		assert(configInfo.pipelineLayout != VK_NULL_HANDLE && "Cannot create graphics pipeline: no pipelineLauout provided in configInfo");
 		assert(configInfo.renderPass != VK_NULL_HANDLE && "Cannot create graphics pipeline: no renderPass provided in configInfo");
 
-		auto vertCode = readFile(vertFilePath);
-		auto fragCode = readFile(fragFilePath);
+		auto vertCode = m_shader.getVertexShader();
+		auto fragCode = m_shader.getFragmentShader();
 		auto vertShaderModule = createShaderModule(vertCode);
 		auto fragShaderModule = createShaderModule(fragCode);
 
