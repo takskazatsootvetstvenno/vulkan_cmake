@@ -62,6 +62,7 @@ namespace sge {
         std::vector<uint32_t>   m_ind;
         std::unique_ptr<Buffer> m_vertexBuffer;
         std::unique_ptr<Buffer> m_indexBuffer;
+
         uint32_t  m_pipelineId = 0;
         uint32_t  m_descriptorSetId = 0;
         Material  m_material;

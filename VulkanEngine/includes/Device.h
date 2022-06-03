@@ -27,9 +27,7 @@ namespace sge {
         Device& operator=(const Device&) = delete;
         Device(Device&&) = delete;
         Device& operator=(Device&&) = delete;
-
-        VkPhysicalDeviceProperties properties;
-
+        const VkPhysicalDeviceProperties& getPhysicalDeviceProperties() const noexcept;
         SwapChainSupportDetails getSwapChainSupport();
         QueueFamilyIndices findPhysicalQueueFamilies();
         VkDevice device() const noexcept;
@@ -40,6 +38,8 @@ namespace sge {
         VkInstance getInstance() const noexcept;
         bool enableValidationLayers() const noexcept;
         VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+        [[nodiscard]] VkImageView createImageView(const VkImage image, const VkFormat format) noexcept;
+        [[nodiscard]] VkSampler createTextureSampler(const VkSamplerCreateInfo& sampleInfo) const noexcept;
         void createImageWithInfo(const VkImageCreateInfo& imageInfo,
             VkMemoryPropertyFlags properties,
             VkImage& image,
@@ -51,6 +51,10 @@ namespace sge {
             VkBuffer& buffer,
             VkDeviceMemory& bufferMemory);
         void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) const;
+        void copyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, uint32_t width, uint32_t height) const;
+        void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) const;
+        uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
     private:
 
         void createInstance();
@@ -65,10 +69,10 @@ namespace sge {
         void endSingleTimeCommands(const VkCommandBuffer commandBuffer) const;
         VkCommandBuffer beginSingleTimeCommands() const;
 
-        uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
         std::vector<const char*> getRequiredExtentions();
         QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
         SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+        VkPhysicalDeviceProperties m_physicalProperties;
         Window& m_window;
         VkInstance m_instance;
         VkSurfaceKHR m_surface;

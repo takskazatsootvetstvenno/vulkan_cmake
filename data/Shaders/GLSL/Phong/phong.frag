@@ -1,7 +1,10 @@
-#version 450
+//
+#version 460
+
 layout (location = 0) in vec3 worldPos_in;
 layout (location = 1) in vec3 norm_in;
 layout (location = 2) in vec3 cameraPosition_in;
+layout (location = 3) in vec2 texCoords_in;
 
 layout (location = 0) out vec4 outColor;
 
@@ -10,10 +13,12 @@ layout(set = 0, binding = 1) uniform MeshUbo
 	mat4 modelMatrix;
 	mat3 normalMatrix;
 	vec4 baseColor;
-    vec4 lightDirection;
+	vec4 lightDirection;
 	float metallic;
 	float roughness;
 } localUBO;
+
+layout(set = 0, binding = 2) uniform sampler2D texSampler;
 
 const float M_PI = 3.141592653589793;
 const vec3 lightPoint = vec3(1.f,-2.f,1.f);
@@ -31,7 +36,9 @@ void main() {
 	float spec = pow(max(dot(V, reflectDir), 0.0), 32);
 	const float R = length(lightPoint - worldPos_in);
 
-	vec3 Color = ((0.1f + diffuse + spec) / (R*R) * localUBO.baseColor).xyz;
+	//vec3 Color = ((0.1f + diffuse + spec) / (R*R) * localUBO.baseColor).xyz;
+	vec3 Color = ((0.1f + diffuse + spec) / (R*R) * texture(texSampler, texCoords_in)).xyz;
+	
 	outColor = vec4(pow(Color, vec3(1.f/gamma)), 1.f);
 	//outColor = vec4(1.f,0.5f,0.5f,1.f);
 }

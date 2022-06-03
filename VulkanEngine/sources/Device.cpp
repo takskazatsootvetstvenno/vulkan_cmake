@@ -165,7 +165,7 @@ namespace sge {
             LOG_ERROR("Failed to find suitable GPU!!!");
             assert(false);
         }
-        vkGetPhysicalDeviceProperties(m_physicalDevice, &properties);
+        vkGetPhysicalDeviceProperties(m_physicalDevice, &m_physicalProperties);
     }
     void Device::createSurface() { 
         m_window.createWindowSurface(m_instance, &m_surface); 
@@ -213,7 +213,7 @@ namespace sge {
         {
             LOG_ERROR("Failed to create logical device!\nError: " << getErrorNameFromEnum(result) << " : " << result << "\n")
                 LOG_MSG("All available device extensions:\n")
-                for (auto device_extenstion : m_availableExtensions)
+                for (auto& device_extenstion : m_availableExtensions)
                     LOG_MSG(device_extenstion.extensionName << " Version: " << device_extenstion.specVersion)
                 LOG_MSG("Requested extensions:\n")
                 for (auto extenstion : m_deviceExtensions)
@@ -226,7 +226,12 @@ namespace sge {
         vkGetDeviceQueue(m_device, indices.presentFamily, 0, &m_presentQueue);
     }
     
-     SwapChainSupportDetails Device::getSwapChainSupport() {
+    const VkPhysicalDeviceProperties& Device::getPhysicalDeviceProperties() const noexcept
+    {
+        return m_physicalProperties;
+    }
+
+    SwapChainSupportDetails Device::getSwapChainSupport() {
         return querySwapChainSupport(m_physicalDevice); 
     }
 
@@ -424,6 +429,44 @@ namespace sge {
         assert(false && "failed to find supported format!");
     }
 
+    [[nodiscard]] VkImageView Device::createImageView(const VkImage image, const VkFormat format) noexcept
+    {
+        VkImageViewCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        createInfo.image = image;
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = format;
+        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = 0;
+        createInfo.subresourceRange.layerCount = 1;
+
+        VkImageView imageView;
+        auto result = vkCreateImageView(m_device, &createInfo, nullptr, &imageView);
+        if (result != VK_SUCCESS)
+        {
+            LOG_ERROR("failed to create image views!\nError: " << getErrorNameFromEnum(result) << " | " << result)
+            assert(false);
+        }
+        return imageView;
+    }
+
+    VkSampler Device::createTextureSampler(const VkSamplerCreateInfo& sampleInfo) const noexcept
+    {
+        VkSampler textureSampler;
+        auto result = vkCreateSampler(m_device, &sampleInfo, nullptr, &textureSampler);
+        if (result != VK_SUCCESS) {
+            LOG_ERROR("Failed to create texture sampler!");
+            assert(false);
+        }
+        return textureSampler;
+    }
+
     void Device::createCommandPool() {
         QueueFamilyIndices queueFamilyIndices = findPhysicalQueueFamilies();
 
@@ -556,6 +599,89 @@ namespace sge {
 
         endSingleTimeCommands(commandBuffer);
     }
+
+    void Device::copyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, uint32_t width, uint32_t height) const {
+        VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+        VkBufferImageCopy region{};
+        region.bufferOffset = 0;
+        region.bufferRowLength = 0;
+        region.bufferImageHeight = 0;
+
+        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.mipLevel = 0;
+        region.imageSubresource.baseArrayLayer = 0;
+        region.imageSubresource.layerCount = 1;
+
+        region.imageOffset = { 0, 0, 0 };
+        region.imageExtent = {
+            width,
+            height,
+            1
+        };
+
+        vkCmdCopyBufferToImage(
+            commandBuffer,
+            srcBuffer,
+            dstImage,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1,
+            &region
+        );
+        endSingleTimeCommands(commandBuffer);
+    }
+
+    void Device::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) const {
+        VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout = oldLayout;
+        barrier.newLayout = newLayout;
+
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        barrier.image = image;
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
+
+        VkPipelineStageFlags sourceStage;
+        VkPipelineStageFlags destinationStage;
+
+        if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        }
+        else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+            sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+        else {
+            LOG_ERROR("unsupported layout transition!");
+            assert(false);
+        }
+
+        vkCmdPipelineBarrier(
+            commandBuffer,
+            sourceStage,
+            destinationStage,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier
+        );
+        endSingleTimeCommands(commandBuffer);
+    }
+
     void Device::setupDebugMessenger() {
         if (!m_enableValidationLayers) return;
         VkDebugUtilsMessengerCreateInfoEXT createInfo{};

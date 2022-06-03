@@ -16,6 +16,8 @@
 #include <numeric>
 #include <iterator>
 #include "Shader.h"
+#include "Texture.h"
+
 namespace sge {
     App::App()
     {
@@ -26,6 +28,7 @@ namespace sge {
         mgr.setDescriptorPool(DescriptorPool::Builder(m_device)
             .setMaxSets(1024)
             .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1024)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1024)
             .build());
 
         mgr.m_generalMatrixUBO = std::make_unique<Buffer>(
@@ -40,34 +43,40 @@ namespace sge {
         auto descriptorLayout = DescriptorSetLayout::Builder(m_device)
             .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
             .addBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+            .addBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .build();
 
-        VkPipelineLayout pipelineLayout;
-        createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayout);
+        
+        if (Shader glslPBRShader("Shaders/GLSL/PBR/PBR.vert.spv", "Shaders/GLSL/PBR/PBR.frag.spv"); glslPBRShader.isValid())
+        {
+            VkPipelineLayout pipelineLayoutGLSLPBR;
+            createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayoutGLSLPBR);
+            mgr.m_pipelines.emplace_back(pipelineLayoutGLSLPBR);
+            createPipeline(pipelineLayoutGLSLPBR, mgr.m_pipelines[mgr.m_pipelines.size() - 1].pipeline, std::move(glslPBRShader));
+        }
+        if (Shader glslPhongShader("Shaders/GLSL/Phong/phong.vert.spv", "Shaders/GLSL/Phong/phong.frag.spv"); glslPhongShader.isValid())
+        {
+            VkPipelineLayout pipelineLayoutGLSLPhong;
+            createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayoutGLSLPhong);
+            mgr.m_pipelines.emplace_back(pipelineLayoutGLSLPhong);
+            createPipeline(pipelineLayoutGLSLPhong, mgr.m_pipelines[mgr.m_pipelines.size() - 1].pipeline, std::move(glslPhongShader));
+        }
+        if (Shader hlslPhongShader("Shaders/HLSL/Phong/phong.vert.spv", "Shaders/HLSL/Phong/phong.frag.spv"); hlslPhongShader.isValid())
+        {
+            VkPipelineLayout pipelineLayoutHLSLPhong;
+            createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayoutHLSLPhong);
+            mgr.m_pipelines.emplace_back(pipelineLayoutHLSLPhong);
+            createPipeline(pipelineLayoutHLSLPhong, mgr.m_pipelines[mgr.m_pipelines.size() - 1].pipeline, std::move(hlslPhongShader));
+        }
+        if (Shader hlslPBRShader("Shaders/HLSL/PBR/PBR.vert.spv", "Shaders/HLSL/PBR/PBR.frag.spv"); hlslPBRShader.isValid())
+        {
+            VkPipelineLayout pipelineLayoutHLSLPBR;
+            createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayoutHLSLPBR);
+            mgr.m_pipelines.emplace_back(pipelineLayoutHLSLPBR);
+            createPipeline(pipelineLayoutHLSLPBR, mgr.m_pipelines[mgr.m_pipelines.size() - 1].pipeline, std::move(hlslPBRShader));
+        }
+        m_model = std::make_unique<Model>(m_device);
 
-        VkPipelineLayout pipelineLayoutGLSLPhong;
-        createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayoutGLSLPhong);
-
-        VkPipelineLayout pipelineLayoutHLSLPhong;
-        createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayoutHLSLPhong);
-
-        VkPipelineLayout pipelineLayoutHLSLPBR;
-        createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayoutHLSLPBR);
-
-        //GLSL
-        mgr.m_pipelines.emplace_back(pipelineLayout);
-        createPipeline(pipelineLayout, mgr.m_pipelines[0].pipeline, Shader("Shaders/GLSL/PBR/PBR.vert.spv", "Shaders/GLSL/PBR/PBR.frag.spv"));
-
-        mgr.m_pipelines.emplace_back(pipelineLayoutGLSLPhong);
-        createPipeline(pipelineLayoutGLSLPhong, mgr.m_pipelines[1].pipeline, Shader("Shaders/GLSL/Phong/phong.vert.spv", "Shaders/GLSL/Phong/phong.frag.spv"));
-
-        //HLSL
-        mgr.m_pipelines.emplace_back(pipelineLayoutHLSLPhong);
-        createPipeline(pipelineLayoutHLSLPhong, mgr.m_pipelines[2].pipeline, Shader("Shaders/HLSL/Phong/phong.vert.spv", "Shaders/HLSL/Phong/phong.frag.spv"));
-
-        //HLSL
-        mgr.m_pipelines.emplace_back(pipelineLayoutHLSLPBR);
-        createPipeline(pipelineLayoutHLSLPhong, mgr.m_pipelines[3].pipeline, Shader("Shaders/HLSL/PBR/PBR.vert.spv", "Shaders/HLSL/PBR/PBR.frag.spv"));
     }
 
     App::~App()
@@ -76,6 +85,13 @@ namespace sge {
         for (auto& pipeline : mgr.m_pipelines)
         {
             vkDestroyPipelineLayout(m_device.device(), pipeline.pipelineLayout, nullptr);
+        }
+        for (auto& textures : mgr.m_textures)
+        {
+            vkDestroyImage(m_device.device(), textures.second.getTextureImage(), nullptr);
+            vkFreeMemory(m_device.device(), textures.second.getTextureImageMemory(), nullptr);
+            vkDestroyImageView(m_device.device(), textures.second.getImageView(), nullptr);
+            vkDestroySampler(m_device.device(), textures.second.getSampler(), nullptr);
         }
         mgr.clearTable();
     }
@@ -129,7 +145,7 @@ namespace sge {
                             mgr.m_pipelines[(current_pipeline+1) % numOfPipelines]
                         );
                         (++current_pipeline) %= numOfPipelines;
-                        LOG_MSG("Pipeline: " << current_pipeline<< mgr.m_pipelines[0].pipeline->getShader().getFragmentShaderPath());
+                        LOG_MSG("Pipeline #" << current_pipeline << ": " << mgr.m_pipelines[0].pipeline->getShader().getFragmentShaderPath());
                      }
                     break;
                 case 83:	//S
@@ -168,6 +184,7 @@ namespace sge {
         );
     }
     void App::run() {
+        m_model->createBuffers();
         auto& mgr = MeshMGR::Instance();
 
         while (!m_window.shouldClose()) {
@@ -239,15 +256,31 @@ namespace sge {
             auto descriptorLayout = DescriptorSetLayout::Builder(m_device)
                 .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
                 .addBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+                .addBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
                 .build();
-
+            
             VkDescriptorSet descriptorSet;
             auto globalBufferInfo = mgr.m_generalMatrixUBO->descriptorInfo();
             auto bufferInfo = uboBuffer->descriptorInfo();
-            DescriptorWriter(*descriptorLayout, mgr.getDescriptorPool())
-                .writeBuffer(0, &globalBufferInfo)
-                .writeBuffer(1, &bufferInfo)
-                .build(descriptorSet);
+
+            if (mesh.m_material.m_hasColorMap) {
+                auto baseColorPair = mgr.m_textures.try_emplace(mesh.m_material.m_baseColorPath, mesh.m_material.m_baseColorPath);
+                m_model->createTexture(baseColorPair.first->second);
+                auto textureInfo = baseColorPair.first->second.getDescriptorInfo();
+
+                DescriptorWriter(*descriptorLayout, mgr.getDescriptorPool())
+                    .writeBuffer(0, &globalBufferInfo)
+                    .writeBuffer(1, &bufferInfo)
+                    .writeImage(2, &textureInfo)
+                    .build(descriptorSet);
+            }
+            else
+            {
+                DescriptorWriter(*descriptorLayout, mgr.getDescriptorPool())
+                    .writeBuffer(0, &globalBufferInfo)
+                    .writeBuffer(1, &bufferInfo)
+                    .build(descriptorSet);
+            }
 
             mgr.m_sets.emplace_back(
                 std::move(descriptorLayout),
@@ -257,20 +290,21 @@ namespace sge {
 
             mesh.m_pipelineId = 0;
             mesh.m_descriptorSetId = mgr.m_sets.size()-1;
-
+            
             //update
-            PBRUbo ubo{};
-            ubo.modelMatrix = mesh.getModelMatrix();
-            ubo.normalMatrix = glm::transpose(glm::inverse(mesh.getModelMatrix()));
-            ubo.lightDirection = glm::vec4(1.f, 0.f, 0.f, 0.f);
-            ubo.baseColor = mesh.m_material.m_baseColor;
-            ubo.metallic = mesh.m_material.m_metallicFactor;
-            ubo.roughness = mesh.m_material.m_roughnessFactor;
+            PBRUbo ubo = {
+                .modelMatrix = mesh.getModelMatrix(),
+                .normalMatrix = glm::transpose(glm::inverse(mesh.getModelMatrix())),
+                .baseColor = mesh.m_material.m_baseColor,
+                .lightDirection = glm::vec4(1.f, 0.f, 0.f, 0.f),
+                .metallic = mesh.m_material.m_metallicFactor,
+                .roughness = mesh.m_material.m_roughnessFactor
+            };
+
             auto& buffer = mgr.m_sets[mesh.getDescriptorSetId()].uboBuffer;
             buffer->writeToBuffer(&ubo);
             buffer->flush();
         }
-        m_model = std::make_unique<Model>(m_device);
     }
 
     void App::createPipeline(VkPipelineLayout& pipelineLayout, std::unique_ptr<Pipeline>& pipeline, Shader&& shader) noexcept{

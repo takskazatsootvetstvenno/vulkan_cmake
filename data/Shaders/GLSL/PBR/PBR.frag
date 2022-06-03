@@ -1,7 +1,9 @@
+//
 #version 450
 layout (location = 0) in vec3 worldPos_in;
 layout (location = 1) in vec3 norm_in;
 layout (location = 2) in vec3 cameraPosition_in;
+layout (location = 3) in vec2 texCoords_in;
 
 layout (location = 0) out vec4 outColor;
 
@@ -10,13 +12,13 @@ layout(set = 0, binding = 1) uniform MeshUbo
 	mat4 modelMatrix;
 	mat3 normalMatrix;
 	vec4 baseColor;
-    vec4 lightDirection;
+	vec4 lightDirection;
 	float metallic;
 	float roughness;
 } localUBO;
 
 const float M_PI = 3.141592653589793;
-const vec3 lightPoint = vec3(1.f,-2.f,1.f);
+const vec3 lightPoint = vec3(1.f, -2.f, 1.f);
 const float gamma = 2.2f;
 
 vec3 fDiffuse(const vec3 surfaceColor)

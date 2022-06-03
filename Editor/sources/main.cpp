@@ -128,7 +128,9 @@ void load_model(sge::App& app, const std::string_view path, const glm::mat4 root
 
 int main() {
     sge::App my_app;
-    load_model(my_app, "METAL_SPHERES.gltf");
+    //load_model(my_app, "METAL_SPHERES.gltf");
+    //load_model(my_app, "D:/temp/test_gltf/glTF-Sample-Models/2.0/WaterBottle/glTF/WaterBottle.gltf");
+    load_model(my_app, "WaterBottle.gltf");
     /*load_model(my_app,
         "Models/WaterBottle/WaterBottle.gltf",
         glm::translate(glm::mat4{ 1.f },

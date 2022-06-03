@@ -49,24 +49,40 @@ namespace sge {
 		return m_descriptorSetId;
 	}
 	/*static*/ std::vector<VkVertexInputBindingDescription> Vertex::getBindingDescription() noexcept{
-		std::vector<VkVertexInputBindingDescription> bindingDescriptions(1);
-		bindingDescriptions[0].binding = 0;
-		bindingDescriptions[0].stride = sizeof(Vertex);
-		bindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		std::vector<VkVertexInputBindingDescription> bindingDescriptions =
+		{
+			{
+				.binding = 0,
+				.stride = sizeof(Vertex),
+				.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+			}
+		};
 		return bindingDescriptions;
 	}
 	/*static*/ std::vector<VkVertexInputAttributeDescription>  Vertex::getAttributeDescription() noexcept
 	{
-		std::vector<VkVertexInputAttributeDescription> attributeDescriptions(2);
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;//VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[0].offset = 0;
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions =
+		{
+			{
+				.location = 0,
+				.binding = 0,
+				.format = VK_FORMAT_R32G32B32_SFLOAT,
+				.offset = offsetof(Vertex, m_position)
+			},
+			{
+				.location = 1,
+				.binding = 0,
+				.format = VK_FORMAT_R32G32B32_SFLOAT,
+				.offset = offsetof(Vertex, m_normal)
+			},
+			{
+				.location = 2,
+				.binding = 0,
+				.format = VK_FORMAT_R32G32_SFLOAT,
+				.offset = offsetof(Vertex, m_UV)
+			},
+		};
 
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;//VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[1].offset = sizeof(Vertex::m_position);
 		return attributeDescriptions;
 	}
 

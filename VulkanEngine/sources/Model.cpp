@@ -6,10 +6,20 @@
 #include "MeshMGR.h"
 #include <memory>
 using namespace std::chrono;
+
 namespace sge {
 	static PFN_vkSetDebugUtilsObjectNameEXT SetDebugUtilsObjectNameEXT;
 	Model::~Model()
 	{
+	}
+
+	void Model::createBuffers() noexcept
+	{
+		auto& meshes = MeshMGR::Instance().m_meshes;
+		for (auto& mesh : meshes) {
+			createVertexBuffers(mesh.m_pos, mesh);
+			createIndexBuffers(mesh.m_ind, mesh);
+		}
 	}
 
 	void Model::bind(const VkCommandBuffer commandBuffer, const Mesh& mesh) const noexcept
@@ -26,7 +36,7 @@ namespace sge {
 		vkCmdDrawIndexed(commandBuffer, mesh.getIndexCount(), 1, 0, 0, 0);
 	}
 
-	void Model::createVertexBuffers(const std::vector<Vertex>& vertices, Mesh& mesh)
+	void Model::createVertexBuffers(const std::vector<Vertex>& vertices, Mesh& mesh) noexcept
 	{
 		const uint32_t vertexSize = sizeof(vertices[0]);
 		const VkDeviceSize bufferSize = static_cast<uint64_t>(vertexSize) * mesh.getVertexCount();
@@ -50,7 +60,7 @@ namespace sge {
 		m_device.copyBuffer(stagingBuffer.getBuffer(), mesh.m_vertexBuffer->getBuffer(), bufferSize);
 	}
 
-	void Model::createIndexBuffers(const std::vector<uint32_t>& indices, Mesh& mesh)
+	void Model::createIndexBuffers(const std::vector<uint32_t>& indices, Mesh& mesh) noexcept
 	{
 		assert(indices.empty() == 0 && "Mesh must use index drawing");
 
@@ -78,14 +88,82 @@ namespace sge {
 
 	}
 
+	void Model::createTexture(Texture& texture) noexcept
+	{
+			Buffer stagingBuffer{
+				 m_device,
+				 texture.getImageSize(),
+				 1,
+				 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			};
+
+			stagingBuffer.map();
+			stagingBuffer.writeToBuffer(texture.getData());
+
+			texture.clearDataOnCPU();
+
+			VkImage textureImage;
+			VkDeviceMemory textureImageMemory;
+
+			VkImageCreateInfo imageInfo{};
+			imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+			imageInfo.imageType = VK_IMAGE_TYPE_2D;
+			imageInfo.extent.width = texture.getWidth();
+			imageInfo.extent.height = texture.getHeight();
+			imageInfo.extent.depth = 1;
+			imageInfo.mipLevels = 1;
+			imageInfo.arrayLayers = 1;
+			imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+			imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+			imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+			imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			imageInfo.flags = 0;
+
+			m_device.createImageWithInfo(
+				imageInfo,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				textureImage,
+				textureImageMemory);
+
+			m_device.transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			m_device.copyBufferToImage(stagingBuffer.getBuffer(), textureImage, static_cast<uint32_t>(texture.getWidth()), static_cast<uint32_t>(texture.getHeight()));
+			m_device.transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+			auto textureImageView = m_device.createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB);
+
+			VkSamplerCreateInfo samplerInfo{};
+			samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+			samplerInfo.magFilter = VK_FILTER_LINEAR;
+			samplerInfo.minFilter = VK_FILTER_LINEAR;
+			samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			samplerInfo.anisotropyEnable = VK_TRUE;
+			samplerInfo.maxAnisotropy = m_device.getPhysicalDeviceProperties().limits.maxSamplerAnisotropy;
+			samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+			samplerInfo.unnormalizedCoordinates = VK_FALSE;
+			samplerInfo.compareEnable = VK_FALSE;
+			samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+			samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			samplerInfo.mipLodBias = 0.0f;
+			samplerInfo.minLod = 0.0f;
+			samplerInfo.maxLod = 0.0f;
+
+			auto sampler = m_device.createTextureSampler(samplerInfo);
+
+			texture.setTextureImage(textureImage);
+			texture.setImageView(textureImageView);
+			texture.setTextureImageMemory(textureImageMemory);
+			texture.setSampler(sampler);
+		
+	}
+
 	Model::Model(Device& device)
 		:m_device(device)
 	{
-		auto& meshes = MeshMGR::Instance().m_meshes;
-		for (auto& mesh : meshes) {
-			createVertexBuffers(mesh.m_pos, mesh);
-			createIndexBuffers(mesh.m_ind, mesh);
-		}
 	}
 
 }

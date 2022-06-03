@@ -15,6 +15,8 @@ namespace sge {
 		[[nodiscard]] const std::string& getFragmentShader() const noexcept;
 		[[nodiscard]] const std::string& getVertexShaderPath() const noexcept;
 		[[nodiscard]] const std::string& getFragmentShaderPath() const noexcept;
+		[[nodiscard]] const bool isValid() const noexcept;
+
 	private:
 		std::string readFile(const std::string_view filePath) noexcept;
 
@@ -22,5 +24,6 @@ namespace sge {
 		std::string m_fragShaderPath;
 		std::string m_vertShader;
 		std::string m_fragShader;
+		bool m_isValid = true;
 	};
 }

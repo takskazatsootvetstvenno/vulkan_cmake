@@ -22,6 +22,7 @@ set(CORE_INCLUDES
 	includes/VulkanHelpUtils.h
 	includes/Event.h
 	includes/Shader.h
+	includes/Texture.h
 )
 set(CORE_SOURCES
 	sources/Renderer.cpp
@@ -38,6 +39,7 @@ set(CORE_SOURCES
 	sources/Descriptors.cpp
 	sources/MeshMGR.cpp
 	sources/Shader.cpp
+	sources/Texture.cpp
 )
 add_library(${CORE_PROJECT_NAME} STATIC
 	${CORE_INCLUDES}

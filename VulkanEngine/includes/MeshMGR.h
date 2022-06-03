@@ -4,6 +4,8 @@
 #include "Descriptors.h"
 #include <vector>
 #include <memory>
+#include <unordered_map>
+#include <Texture.h>
 
 namespace sge {
 	struct DescriptorSetInfo
@@ -27,16 +29,21 @@ namespace sge {
 		MeshMGR& operator=(MeshMGR&&) = delete;
 
 		static MeshMGR& Instance() noexcept;
-		void setDescriptorPool(std::unique_ptr<DescriptorPool>&& uptr_descriptor_pool) noexcept;
+		void setDescriptorPool(std::unique_ptr<DescriptorPool>&& uptr_descriptorUBO_pool) noexcept;
+		void setDescriptorSamplerPool(std::unique_ptr<DescriptorPool>&& uptr_descriptorSampler_pool) noexcept;
 		void clearTable() noexcept;
 		DescriptorPool& getDescriptorPool() const;
+		DescriptorPool& getDescriptorSamplerPool() const;
+
 		std::vector<PipelineInfo>      m_pipelines;
 		std::vector<DescriptorSetInfo> m_sets;
 		std::vector<Mesh>              m_meshes;
 		std::unique_ptr<Buffer>        m_generalMatrixUBO;
+		std::unordered_map<std::string, Texture> m_textures;
 	private:
 		MeshMGR();
 		~MeshMGR();
 		std::unique_ptr<DescriptorPool> m_globalPool{};
+		std::unique_ptr<DescriptorPool> m_globalSamplerPool{};
 	};
 }

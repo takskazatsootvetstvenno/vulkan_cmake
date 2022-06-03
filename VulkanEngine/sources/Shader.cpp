@@ -11,7 +11,9 @@ namespace sge {
 		if (!file.is_open())
 		{
 			LOG_ERROR("Failed to open file: " << filePath << "!")
+			m_isValid = false;
 			assert(false);
+			return "";
 		}
 		const size_t fileSize = static_cast<size_t>(file.tellg());
 		std::string buffer;
@@ -60,5 +62,9 @@ namespace sge {
 	const std::string& Shader::getFragmentShaderPath() const noexcept
 	{
 		return m_fragShaderPath;
+	}
+	const bool Shader::isValid() const noexcept
+	{
+		return m_isValid;
 	}
 }

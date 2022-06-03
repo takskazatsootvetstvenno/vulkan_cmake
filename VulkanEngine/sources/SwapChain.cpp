@@ -189,32 +189,14 @@ namespace sge {
         m_swapChainImageFormat = surfaceFormat.format;
         m_swapChainExtent = extent;
     }
+
     void SwapChain::createImageViews()
     {
         m_swapChainImageViews.resize(m_swapChainImages.size());
-        for (size_t i = 0; i < m_swapChainImages.size(); i++) {
-            VkImageViewCreateInfo createInfo{};
-            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            createInfo.image = m_swapChainImages[i];
-            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            createInfo.format = m_swapChainImageFormat;
-            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            createInfo.subresourceRange.baseMipLevel = 0;
-            createInfo.subresourceRange.levelCount = 1;
-            createInfo.subresourceRange.baseArrayLayer = 0;
-            createInfo.subresourceRange.layerCount = 1;
-            auto result = vkCreateImageView(m_device.device(), &createInfo, nullptr, &m_swapChainImageViews[i]);
-            if (result != VK_SUCCESS)
-            {
-                LOG_ERROR("failed to create image views!\nError: " << getErrorNameFromEnum(result) << " | " << result)
-                assert(false);
-            }
-        }
+        for (size_t i = 0; i < m_swapChainImages.size(); ++i) 
+            m_swapChainImageViews[i] = m_device.createImageView(m_swapChainImages[i], m_swapChainImageFormat);
     }
+
     void SwapChain::createDepthResources() {
         VkFormat depthFormat = findDepthFormat();
         VkExtent2D swapChainExtent = m_swapChainExtent;

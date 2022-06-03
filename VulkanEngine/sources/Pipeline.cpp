@@ -127,6 +127,11 @@ namespace sge {
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
 	}
 
+	const DescriptorSetLayout& Pipeline::getDescriptorLayout() noexcept
+	{
+		return *m_descriptorLayout;
+	}
+
 	PipelineConfigInfo Pipeline::createDefaultPipeline(uint32_t width, uint32_t height)
 	{
 		PipelineConfigInfo configInfo{};

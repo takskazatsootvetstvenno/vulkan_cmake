@@ -1,3 +1,4 @@
+//
 static const float M_PI = 3.141592653589793;
 static const float3 lightPoint = float3(1.f, -2.f, 1.f);
 static const float gamma = 2.2f;
@@ -7,7 +8,8 @@ struct VS_INPUT
 	float4 Position : SV_Position;
 	float3 Normal : NORMAL;
 	float3 CameraPosition :POSITION1;
-	float3 world_pos :POSITION2;
+	float3 worldPos :POSITION2;
+	float2 TexCoords : TEXCOORD;
 };
 
 [[vk::binding(1, 0)]] cbuffer CBufferPerObject
@@ -47,13 +49,13 @@ float microfacetDistribution(const float alpha, const float NdotH) //D
 float3 getPointLightColor(const float3 worldPosition)
 {
 	const float denominator = distance(lightPoint, worldPosition);
-	return float3(1.f,1.f,1.f) / (denominator * denominator);
+	return float3(1.f, 1.f, 1.f) / (denominator * denominator);
 }
 
 float4 main( VS_INPUT IN ) : SV_Target
 {
-	const float3 L = normalize(lightPoint - IN.world_pos);
-	const float3 V = normalize(IN.CameraPosition - IN.world_pos);
+	const float3 L = normalize(lightPoint - IN.worldPos);
+	const float3 V = normalize(IN.CameraPosition - IN.worldPos);
 	const float3 N = normalize(IN.Normal);
 	const float3 H = normalize(V + L);
 
@@ -85,6 +87,6 @@ float4 main( VS_INPUT IN ) : SV_Target
 
 	const float3 diffuseContrib = (1.0 - F) * fDiffuse(diffuseColor);
 	const float3 specContrib = F * G * D / (4.0 * NdotL * NdotV);
-	const float3 color = (diffuseContrib + specContrib) * getPointLightColor(IN.world_pos) * NdotL;
-	return float4(pow(color, float3(1.f/gamma, 1.f / gamma, 1.f / gamma)), 1.f);
+	const float3 color = (diffuseContrib + specContrib) * getPointLightColor(IN.worldPos) * NdotL;
+	return float4(pow(color, float3(1.f / gamma, 1.f / gamma, 1.f / gamma)), 1.f);
 }
