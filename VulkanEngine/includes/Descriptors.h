@@ -28,7 +28,7 @@ namespace sge {
         DescriptorSetLayout(
             Device& device, std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings);
         ~DescriptorSetLayout();
-        DescriptorSetLayout(const DescriptorSetLayout&) = delete;
+        DescriptorSetLayout(const DescriptorSetLayout& other);
         DescriptorSetLayout& operator=(const DescriptorSetLayout&) = delete;
 
         VkDescriptorSetLayout getDescriptorSetLayout() const { return m_descriptorSetLayout; }

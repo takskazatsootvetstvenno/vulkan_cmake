@@ -14,6 +14,7 @@ namespace sge {
 		std::unique_ptr<Buffer> uboBuffer;
 		VkDescriptorSet set;
 	};
+
 	struct PipelineInfo
 	{
 		VkPipelineLayout pipelineLayout;
@@ -30,10 +31,8 @@ namespace sge {
 
 		static MeshMGR& Instance() noexcept;
 		void setDescriptorPool(std::unique_ptr<DescriptorPool>&& uptr_descriptorUBO_pool) noexcept;
-		void setDescriptorSamplerPool(std::unique_ptr<DescriptorPool>&& uptr_descriptorSampler_pool) noexcept;
 		void clearTable() noexcept;
 		DescriptorPool& getDescriptorPool() const;
-		DescriptorPool& getDescriptorSamplerPool() const;
 
 		std::vector<PipelineInfo>      m_pipelines;
 		std::vector<DescriptorSetInfo> m_sets;
@@ -44,6 +43,5 @@ namespace sge {
 		MeshMGR();
 		~MeshMGR();
 		std::unique_ptr<DescriptorPool> m_globalPool{};
-		std::unique_ptr<DescriptorPool> m_globalSamplerPool{};
 	};
 }

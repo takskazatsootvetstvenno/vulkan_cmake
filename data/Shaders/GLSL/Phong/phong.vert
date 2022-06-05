@@ -1,5 +1,5 @@
 //
-#version 460
+#version 450
 
 layout(location = 0) in vec3 position_in;
 layout(location = 1) in vec3 normal_in;
@@ -29,6 +29,7 @@ layout(set = 0, binding = 1) uniform MeshUbo
 } localUBO;
 
 void main(){
+	float a;
 	norm_out = normalize(localUBO.normalMatrix * normal_in); //(M^-1)^T
 	cameraPosition_out = globalUBO.cameraPosition;
 	worldPos_out = vec3(localUBO.modelMatrix * vec4(position_in, 1.0));

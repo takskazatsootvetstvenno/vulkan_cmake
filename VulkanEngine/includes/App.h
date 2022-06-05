@@ -39,7 +39,7 @@ namespace sge {
     private:
 
         void createPipeline(VkPipelineLayout& pipelineLayout, std::unique_ptr<Pipeline>& pipeline, Shader&& shader) noexcept;
-        void createPipeLineLayout(VkDescriptorSetLayout globalSetLayout, VkPipelineLayout& pipelineLayout) noexcept;
+        const VkPipelineLayout createPipeLineLayout(VkDescriptorSetLayout setLayout) noexcept;
         void renderObjects(VkCommandBuffer commandBuffer) noexcept;
         void initEvents() noexcept;
         Window m_window{800, 600, "vulkan_window"};

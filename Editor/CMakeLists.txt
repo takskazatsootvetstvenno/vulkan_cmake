@@ -22,33 +22,19 @@ target_include_directories(${EDITOR_PROJECT_NAME} PRIVATE src)
 target_link_libraries(${EDITOR_PROJECT_NAME} ${CONAN_LIBS})
 target_link_libraries(${EDITOR_PROJECT_NAME} VulkanEngine)
 
-execute_process(COMMAND ${PROJECT_SOURCE_DIR}/compile_shaders.cmd  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-if(MSVC)
-add_custom_command(TARGET ${EDITOR_PROJECT_NAME}
-    POST_BUILD 
-    COMMAND ${PROJECT_SOURCE_DIR}/compile_shaders.cmd  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-endif()
 add_custom_command(TARGET ${EDITOR_PROJECT_NAME}
     POST_BUILD 
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/PBR/PBR.frag        ${PROJECT_BINARY_DIR}/Editor/Shaders/GLSL/PBR/PBR.frag
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/PBR/PBR.frag.spv    ${PROJECT_BINARY_DIR}/Editor/Shaders/GLSL/PBR/PBR.frag.spv
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/PBR/PBR.vert        ${PROJECT_BINARY_DIR}/Editor/Shaders/GLSL/PBR/PBR.vert
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/PBR/PBR.vert.spv    ${PROJECT_BINARY_DIR}/Editor/Shaders/GLSL/PBR/PBR.vert.spv
 	
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Phong/phong.frag     ${PROJECT_BINARY_DIR}/Editor/Shaders/GLSL/Phong/phong.frag
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Phong/phong.frag.spv ${PROJECT_BINARY_DIR}/Editor/Shaders/GLSL/Phong/phong.frag.spv
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Phong/phong.vert     ${PROJECT_BINARY_DIR}/Editor/Shaders/GLSL/Phong/phong.vert
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Phong/phong.vert.spv ${PROJECT_BINARY_DIR}/Editor/Shaders/GLSL/Phong/phong.vert.spv
 	
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/HLSL/Phong/phong_frag.hlsl ${PROJECT_BINARY_DIR}/Editor/Shaders/HLSL/Phong/phong_frag.hlsl
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/HLSL/Phong/phong.frag.spv  ${PROJECT_BINARY_DIR}/Editor/Shaders/HLSL/Phong/phong.frag.spv
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/HLSL/Phong/phong_vert.hlsl ${PROJECT_BINARY_DIR}/Editor/Shaders/HLSL/Phong/phong_vert.hlsl
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/HLSL/Phong/phong.vert.spv  ${PROJECT_BINARY_DIR}/Editor/Shaders/HLSL/Phong/phong.vert.spv
 
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/HLSL/PBR/PBR_frag.hlsl ${PROJECT_BINARY_DIR}/Editor/Shaders/HLSL/PBR/PBR_frag.hlsl
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/HLSL/PBR/PBR.frag.spv  ${PROJECT_BINARY_DIR}/Editor/Shaders/HLSL/PBR/PBR.frag.spv
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/HLSL/PBR/PBR_vert.hlsl ${PROJECT_BINARY_DIR}/Editor/Shaders/HLSL/PBR/PBR_vert.hlsl
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/HLSL/PBR/PBR.vert.spv  ${PROJECT_BINARY_DIR}/Editor/Shaders/HLSL/PBR/PBR.vert.spv
 
 )
 if(CMAKE_BUILD_TYPE STREQUAL "Release")

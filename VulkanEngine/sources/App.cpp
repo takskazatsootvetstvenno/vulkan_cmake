@@ -45,38 +45,32 @@ namespace sge {
             .addBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
             .addBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .build();
-
         
-        if (Shader glslPBRShader("Shaders/GLSL/PBR/PBR.vert.spv", "Shaders/GLSL/PBR/PBR.frag.spv"); glslPBRShader.isValid())
+        if (Shader glslPBRShader("Shaders/GLSL/PBR/PBR.vert", "Shaders/GLSL/PBR/PBR.frag"); glslPBRShader.isValid())
         {
-            VkPipelineLayout pipelineLayoutGLSLPBR;
-            createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayoutGLSLPBR);
-            mgr.m_pipelines.emplace_back(pipelineLayoutGLSLPBR);
-            createPipeline(pipelineLayoutGLSLPBR, mgr.m_pipelines[mgr.m_pipelines.size() - 1].pipeline, std::move(glslPBRShader));
+            auto pipelineLayoutGLSLPBR = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
+            mgr.m_pipelines.emplace_back(pipelineLayoutGLSLPBR, nullptr);
+            createPipeline(pipelineLayoutGLSLPBR, mgr.m_pipelines.back().pipeline, std::move(glslPBRShader));
         }
-        if (Shader glslPhongShader("Shaders/GLSL/Phong/phong.vert.spv", "Shaders/GLSL/Phong/phong.frag.spv"); glslPhongShader.isValid())
+        if (Shader glslPhongShader("Shaders/GLSL/Phong/phong.vert", "Shaders/GLSL/Phong/phong.frag"); glslPhongShader.isValid())
         {
-            VkPipelineLayout pipelineLayoutGLSLPhong;
-            createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayoutGLSLPhong);
-            mgr.m_pipelines.emplace_back(pipelineLayoutGLSLPhong);
-            createPipeline(pipelineLayoutGLSLPhong, mgr.m_pipelines[mgr.m_pipelines.size() - 1].pipeline, std::move(glslPhongShader));
+            auto pipelineLayoutGLSLPhong = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
+            mgr.m_pipelines.emplace_back(pipelineLayoutGLSLPhong, nullptr);
+            createPipeline(pipelineLayoutGLSLPhong, mgr.m_pipelines.back().pipeline, std::move(glslPhongShader));
         }
-        if (Shader hlslPhongShader("Shaders/HLSL/Phong/phong.vert.spv", "Shaders/HLSL/Phong/phong.frag.spv"); hlslPhongShader.isValid())
+        if (Shader hlslPhongShader("Shaders/HLSL/Phong/phong_vert.hlsl", "Shaders/HLSL/Phong/phong_frag.hlsl"); hlslPhongShader.isValid())
         {
-            VkPipelineLayout pipelineLayoutHLSLPhong;
-            createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayoutHLSLPhong);
-            mgr.m_pipelines.emplace_back(pipelineLayoutHLSLPhong);
-            createPipeline(pipelineLayoutHLSLPhong, mgr.m_pipelines[mgr.m_pipelines.size() - 1].pipeline, std::move(hlslPhongShader));
+            auto pipelineLayoutHLSLPhong = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
+            mgr.m_pipelines.emplace_back(pipelineLayoutHLSLPhong, nullptr);
+            createPipeline(pipelineLayoutHLSLPhong, mgr.m_pipelines.back().pipeline, std::move(hlslPhongShader));
         }
-        if (Shader hlslPBRShader("Shaders/HLSL/PBR/PBR.vert.spv", "Shaders/HLSL/PBR/PBR.frag.spv"); hlslPBRShader.isValid())
+        if (Shader hlslPBRShader("Shaders/HLSL/PBR/PBR_vert.hlsl", "Shaders/HLSL/PBR/PBR_frag.hlsl"); hlslPBRShader.isValid())
         {
-            VkPipelineLayout pipelineLayoutHLSLPBR;
-            createPipeLineLayout(descriptorLayout->getDescriptorSetLayout(), pipelineLayoutHLSLPBR);
-            mgr.m_pipelines.emplace_back(pipelineLayoutHLSLPBR);
-            createPipeline(pipelineLayoutHLSLPBR, mgr.m_pipelines[mgr.m_pipelines.size() - 1].pipeline, std::move(hlslPBRShader));
+            auto pipelineLayoutHLSLPBR = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
+            mgr.m_pipelines.emplace_back(pipelineLayoutHLSLPBR, nullptr);
+            createPipeline(pipelineLayoutHLSLPBR, mgr.m_pipelines.back().pipeline, std::move(hlslPBRShader));
         }
         m_model = std::make_unique<Model>(m_device);
-
     }
 
     App::~App()
@@ -217,7 +211,8 @@ namespace sge {
         vkDeviceWaitIdle(m_device.device());
     }
 
-    void App::createPipeLineLayout(VkDescriptorSetLayout setLayout, VkPipelineLayout& pipelineLayout) noexcept{
+    const VkPipelineLayout App::createPipeLineLayout(VkDescriptorSetLayout setLayout) noexcept {
+        VkPipelineLayout pipelineLayout;
         std::vector<VkDescriptorSetLayout> descriptorSetLayouts{ setLayout };
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -232,7 +227,7 @@ namespace sge {
             LOG_ERROR("failed to create pipeline layout\nError: " << getErrorNameFromEnum(result) << " | " << result)
             assert(false);
         }
-        
+        return pipelineLayout;
     }
 
     void App::loadModels(std::vector<Mesh>&& meshess)

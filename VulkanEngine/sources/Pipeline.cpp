@@ -127,11 +127,6 @@ namespace sge {
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
 	}
 
-	const DescriptorSetLayout& Pipeline::getDescriptorLayout() noexcept
-	{
-		return *m_descriptorLayout;
-	}
-
 	PipelineConfigInfo Pipeline::createDefaultPipeline(uint32_t width, uint32_t height)
 	{
 		PipelineConfigInfo configInfo{};
@@ -182,10 +177,11 @@ namespace sge {
 
 		return configInfo;
 	}
-	VkShaderModule Pipeline::createShaderModule(const std::string& code) { 
+
+	VkShaderModule Pipeline::createShaderModule(const std::vector<uint32_t>& code) {
 		VkShaderModuleCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		createInfo.codeSize = code.size();
+		createInfo.codeSize = code.size() * sizeof(uint32_t);
 		createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 		VkShaderModule shaderModule;
 		auto result = vkCreateShaderModule(m_device.device(), &createInfo, nullptr, &shaderModule);

@@ -57,6 +57,13 @@ namespace sge {
         vkDestroyDescriptorSetLayout(m_device.device(), m_descriptorSetLayout, nullptr);
     }
 
+    DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetLayout& other)
+        :m_bindings(other.m_bindings),
+        m_descriptorSetLayout(other.m_descriptorSetLayout),
+        m_device(other.m_device)
+    {
+    }
+
     // *************** Descriptor Pool Builder *********************
 
     DescriptorPool::Builder& DescriptorPool::Builder::addPoolSize(
