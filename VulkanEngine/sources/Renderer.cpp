@@ -9,11 +9,6 @@
 #include "VulkanHelpUtils.h"
 namespace sge {
 
-    struct SimplePushConstantData {
-        alignas(16) glm::vec2 offset;
-        alignas(16) glm::vec3 color;
-    };
-
     Renderer::Renderer(Window& window, Device& device)
         :m_window(window), m_device(device)
     {
@@ -72,17 +67,15 @@ namespace sge {
             {
                 std::string temp = "CB_" + std::to_string(i);
                 VkDebugUtilsObjectNameInfoEXT cmd_buf = {
-                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-                .pNext = nullptr,
-                .objectType = VK_OBJECT_TYPE_COMMAND_BUFFER,
-                .objectHandle = reinterpret_cast<uint64_t>(m_commandBuffers[i]),
-                .pObjectName = temp.c_str(),
+                    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                    .pNext = nullptr,
+                    .objectType = VK_OBJECT_TYPE_COMMAND_BUFFER,
+                    .objectHandle = reinterpret_cast<uint64_t>(m_commandBuffers[i]),
+                    .pObjectName = temp.c_str(),
                 };
                 SetDebugUtilsObjectNameEXT(m_device.device(), &cmd_buf);
             }
         }
-       // for (uint32_t i = 0; i < m_commandBuffers.size(); ++i)
-       //     recordCommandBuffer(i);
     }
 
     VkCommandBuffer Renderer::beginFrame() noexcept
@@ -92,8 +85,6 @@ namespace sge {
         auto result = m_swapChain->acquireNextImage(&m_currentImageIndex);
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             recreateSwapChain();
-           /* for (uint32_t i = 0; i < m_commandBuffers.size(); ++i)
-                recordCommandBuffer(i);*/
             return nullptr;
         }
         if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -114,10 +105,12 @@ namespace sge {
         }
         return commandBuffer;
     }
+
     int Renderer::getFrameIndex() const noexcept{
         assert(m_isFrameStarted && "Cannot get frame index when frame not in progress");
         return m_currentFrameIndex;
     }
+
     bool Renderer::endFrame() noexcept
     {
         bool needCreateNewPipeline = false;

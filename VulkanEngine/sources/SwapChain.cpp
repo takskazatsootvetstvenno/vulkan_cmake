@@ -19,9 +19,8 @@ namespace sge {
     }
 
     SwapChain::~SwapChain() { 
-        for (auto imageView : m_swapChainImageViews) {
+        for (auto imageView : m_swapChainImageViews) 
             vkDestroyImageView(m_device.device(), imageView, nullptr);
-        }
         m_swapChainImageViews.clear();
 
         if (m_swapChain != nullptr) {
@@ -35,9 +34,8 @@ namespace sge {
             vkFreeMemory(m_device.device(), m_depthImageMemorys[i], nullptr);
         }
         
-        for (auto framebuffer : m_swapChainFramebuffers) {
+        for (auto framebuffer : m_swapChainFramebuffers) 
             vkDestroyFramebuffer(m_device.device(), framebuffer, nullptr);
-        }
 
         vkDestroyRenderPass(m_device.device(), m_renderPass, nullptr);
 
@@ -125,9 +123,9 @@ namespace sge {
     }
 
     VkExtent2D SwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
-        if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+        if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) 
             return capabilities.currentExtent;
-        } else {
+        else {
             VkExtent2D actualExtent = m_windowExtent;
             actualExtent.width = std::max(
                 capabilities.minImageExtent.width,

@@ -13,7 +13,7 @@ namespace sge {
     };
 
     struct SwapChainSupportDetails {
-        VkSurfaceCapabilitiesKHR capabilities;
+        VkSurfaceCapabilitiesKHR capabilities{};
         std::vector<VkSurfaceFormatKHR> formats;
         std::vector<VkPresentModeKHR> presentModes;
     };
@@ -38,7 +38,7 @@ namespace sge {
         VkInstance getInstance() const noexcept;
         bool enableValidationLayers() const noexcept;
         VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-        [[nodiscard]] VkImageView createImageView(const VkImage image, const VkFormat format) noexcept;
+        [[nodiscard]] VkImageView createImageView(const VkImage image, const VkFormat format, bool isCubeMap = false) noexcept;
         [[nodiscard]] VkSampler createTextureSampler(const VkSamplerCreateInfo& sampleInfo) const noexcept;
         void createImageWithInfo(const VkImageCreateInfo& imageInfo,
             VkMemoryPropertyFlags properties,
@@ -51,8 +51,8 @@ namespace sge {
             VkBuffer& buffer,
             VkDeviceMemory& bufferMemory);
         void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) const;
-        void copyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, uint32_t width, uint32_t height) const;
-        void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) const;
+        void copyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, uint32_t width, uint32_t height, uint32_t layerCount = 1) const;
+        void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount = 1) const;
         uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
     private:

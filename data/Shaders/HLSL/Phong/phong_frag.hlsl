@@ -3,6 +3,9 @@ static const float M_PI = 3.141592653589793;
 static const float3 lightPoint = float3(1.f, -2.f, 1.f);
 static const float gamma = 2.2f;
 
+[[vk::binding(2, 0)]] Texture2D g_Texture; 
+[[vk::binding(2, 0)]] SamplerState sLinear;
+
 struct VS_INPUT
 {
 	float4 ObjectPosition : SV_Position;
@@ -29,7 +32,7 @@ float4 main( VS_INPUT IN ) : SV_Target
 	float3 reflectDir = reflect(-L, N);
 	float spec = pow(max(dot(V, reflectDir), 0.0), 32);
 	const float R = length(lightPoint - IN.worldPos);
-
-	float3 Color = ((0.1f + diffuse + spec) / (R*R) * baseColor).xyz;
+	float4 basecolorTex = g_Texture.SampleLevel( sLinear, IN.texCoords, 0 );
+	float3 Color = ((0.1f + diffuse + spec) / (R*R) * basecolorTex).xyz;
 	return float4(pow(Color, float3(1.f/gamma, 1.f / gamma, 1.f / gamma)), 1.f);
 }

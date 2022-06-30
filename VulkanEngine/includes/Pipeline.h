@@ -23,11 +23,16 @@ namespace sge {
         //std::vector<VkDynamicState> dynamicStateEnables;
         VkPipelineLayout pipelineLayout = nullptr;
         VkRenderPass renderPass = nullptr;
-        
 		VkViewport viewport;
 		VkRect2D scissor;
         uint32_t subpass = 0;
 	};
+
+    struct FixedPipelineStates //TO DO add enums and abstractions
+    {
+        VkCompareOp depthOp = VK_COMPARE_OP_LESS;
+        bool depthWriteEnable = true;
+    };
 
 	class Pipeline
 	{
@@ -42,10 +47,12 @@ namespace sge {
         const Shader& getShader() const noexcept;
         void crateGraphicsPipeline(const PipelineConfigInfo& configInfo);
         void bind(VkCommandBuffer commandBuffer) const noexcept;
-        static PipelineConfigInfo createDefaultPipeline(uint32_t width, uint32_t height);
+        FixedPipelineStates getPipelineStates() const noexcept;
+        static PipelineConfigInfo createDefaultPipeline(uint32_t width, uint32_t height, FixedPipelineStates states);
 
     private:
         VkShaderModule createShaderModule(const std::vector<uint32_t>& code);
+        FixedPipelineStates m_states;
         Device& m_device;
         Shader m_shader;
         VkPipeline m_graphicsPipeline;

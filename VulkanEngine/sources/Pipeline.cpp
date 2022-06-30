@@ -9,6 +9,7 @@ namespace sge {
 	Pipeline::Pipeline(Device& device, Shader&& shader, const PipelineConfigInfo& configInfo)
 		:m_device(device), m_shader(std::move(shader)){
 		crateGraphicsPipeline(configInfo);
+		m_states.depthOp = configInfo.depthStencilInfo.depthCompareOp;
 	}
 
 	const Shader& Pipeline::getShader() const noexcept
@@ -21,8 +22,8 @@ namespace sge {
 		assert(configInfo.pipelineLayout != VK_NULL_HANDLE && "Cannot create graphics pipeline: no pipelineLauout provided in configInfo");
 		assert(configInfo.renderPass != VK_NULL_HANDLE && "Cannot create graphics pipeline: no renderPass provided in configInfo");
 
-		auto vertCode = m_shader.getVertexShader();
-		auto fragCode = m_shader.getFragmentShader();
+		const auto& vertCode = m_shader.getVertexShader();
+		const auto& fragCode = m_shader.getFragmentShader();
 		auto vertShaderModule = createShaderModule(vertCode);
 		auto fragShaderModule = createShaderModule(fragCode);
 
@@ -127,7 +128,12 @@ namespace sge {
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
 	}
 
-	PipelineConfigInfo Pipeline::createDefaultPipeline(uint32_t width, uint32_t height)
+	FixedPipelineStates Pipeline::getPipelineStates() const noexcept
+	{
+		return m_states;
+	}
+
+	PipelineConfigInfo Pipeline::createDefaultPipeline(uint32_t width, uint32_t height, FixedPipelineStates states)
 	{
 		PipelineConfigInfo configInfo{};
 		configInfo.inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -149,7 +155,7 @@ namespace sge {
 		configInfo.rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
 		configInfo.rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
 		configInfo.rasterizationInfo.lineWidth = 1.0f;
-		configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;//VK_CULL_MODE_BACK_BIT;
+		configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 		configInfo.rasterizationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; //VK_FRONT_FACE_CLOCKWISE;
 		configInfo.rasterizationInfo.depthBiasEnable = VK_FALSE;
 		configInfo.rasterizationInfo.depthBiasConstantFactor = 0.f;
@@ -166,8 +172,8 @@ namespace sge {
 
 		configInfo.depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 		configInfo.depthStencilInfo.depthTestEnable = VK_TRUE;
-		configInfo.depthStencilInfo.depthWriteEnable = VK_TRUE;
-		configInfo.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+		configInfo.depthStencilInfo.depthWriteEnable = states.depthWriteEnable;
+		configInfo.depthStencilInfo.depthCompareOp = states.depthOp;
 		configInfo.depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
 		configInfo.depthStencilInfo.minDepthBounds = 0.f;
 		configInfo.depthStencilInfo.maxDepthBounds = 1.f;

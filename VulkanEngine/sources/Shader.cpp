@@ -25,7 +25,7 @@ namespace sge {
 		return buffer;
 	}
 
-	void Shader::processShader(const std::string& source, const ShaderType type, const bool isHLSL)
+	void Shader::processShader(const ShaderType type, bool isHLSL) noexcept
 	{
 		shaderc::Compiler compiler;
 		shaderc::CompileOptions compilerOptions;
@@ -33,6 +33,8 @@ namespace sge {
 		compilerOptions.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
 		compilerOptions.SetTargetSpirv(shaderc_spirv_version_1_5);
 		compilerOptions.SetWarningsAsErrors();
+		compilerOptions.SetGenerateDebugInfo();
+
 		const shaderc_source_language lang = isHLSL ? shaderc_source_language_hlsl : shaderc_source_language_glsl;
 		compilerOptions.SetSourceLanguage(lang);
 		shaderc::SpvCompilationResult result;
@@ -44,25 +46,31 @@ namespace sge {
 			break;
 		case sge::Shader::ShaderType::FragmentShader:
 			result = compiler.CompileGlslToSpv(m_fragShader, shaderc_fragment_shader, "sh.frag", "main", compilerOptions);
+#if 0
+			{auto preresult = compiler.PreprocessGlsl(m_fragShader, shaderc_fragment_shader, "sh.frag", compilerOptions);
+			LOG_MSG(std::string{ preresult.begin(), preresult.end() });
+		}
+#endif 			
 			m_fragShaderSpirV = { result.cbegin(), result.cend() };
 			break;
 		}
-
 		if (result.GetCompilationStatus())
 		{
 			LOG_ERROR("Error message: " << result.GetErrorMessage());
-			LOG_ERROR("Shader compile status: " << result.GetCompilationStatus())
+			LOG_ERROR("Shader compile status: " << result.GetCompilationStatus());
+			m_isValid = false;
 			assert(false);
 		}
 	}
 
-	Shader::Shader(const std::string_view vertexShaderPath, const std::string_view fragmentShaderPath) noexcept
-		:m_vertShaderPath(vertexShaderPath), m_fragShaderPath(fragmentShaderPath)
+	Shader::Shader(const std::string_view vertexShaderPath, const std::string_view fragmentShaderPath, const ShaderDefines& defines) noexcept
+		:m_vertShaderPath(vertexShaderPath), m_fragShaderPath(fragmentShaderPath), m_defines(defines)
 	{
 		const auto vertexExtenstionPos = vertexShaderPath.rfind('.');
 		if (vertexExtenstionPos == std::string::npos)
 		{
 			LOG_ERROR("Can't open shader file without extenstion!\nFile: " << vertexShaderPath);
+			m_isValid = false;
 			assert(false);
 		}
 
@@ -70,17 +78,41 @@ namespace sge {
 		if (fragmentExtenstionPos == std::string::npos)
 		{
 			LOG_ERROR("Can't open shader file without extenstion!\nFile: " << fragmentShaderPath);
+			m_isValid = false;
 			assert(false);
 		}
 
-		m_vertShader = readFile(m_vertShaderPath);
-		m_fragShader = readFile(m_fragShaderPath);
-
 		bool isHLSL = (vertexShaderPath.substr(vertexExtenstionPos) == ".hlsl");
-		processShader(m_vertShader, ShaderType::VertexShader, isHLSL);
+		
+		if (auto vertShaderText = readFile(m_vertShaderPath); !isHLSL) {
+			auto versionPos = vertShaderText.find("#version ");
+			m_vertShader = vertShaderText.substr(0, versionPos + 12) + "\n" + m_defines.vertShaderDefines  + vertShaderText.substr(versionPos + 12);
+		}
+		else
+			m_vertShader = m_defines.vertShaderDefines + vertShaderText;
+
+		processShader(ShaderType::VertexShader, isHLSL);
 
 		isHLSL = (fragmentShaderPath.substr(fragmentExtenstionPos) == ".hlsl");
-		processShader(m_fragShader, ShaderType::FragmentShader, isHLSL);
+
+		if (auto fragShaderText = readFile(m_fragShaderPath); !isHLSL) {
+			auto versionPos = fragShaderText.find("#version ");
+			m_fragShader = fragShaderText.substr(0, versionPos + 12) + "\n" + m_defines.fragmentShaderDefines + fragShaderText.substr(versionPos + 12);
+		}
+		else
+			m_fragShader = m_defines.fragmentShaderDefines + fragShaderText;
+
+		processShader(ShaderType::FragmentShader, isHLSL);
+	}
+	Shader::Shader(const Shader& other)
+		: m_vertShaderPath(other.m_vertShaderPath),
+		m_fragShaderPath(other.m_fragShaderPath),
+		m_vertShader(other.m_vertShader),
+		m_fragShader(other.m_fragShader),
+		m_vertexShaderSpirV(other.m_vertexShaderSpirV),
+		m_fragShaderSpirV(other.m_fragShaderSpirV),
+		m_defines(other.m_defines)
+	{
 	}
 	Shader::Shader(Shader&& other) noexcept
 		: m_vertShaderPath(std::move(other.m_vertShaderPath)),
@@ -88,8 +120,20 @@ namespace sge {
 		m_vertShader(std::move(other.m_vertShader)),
 		m_fragShader(std::move(other.m_fragShader)),
 		m_vertexShaderSpirV(std::move(other.m_vertexShaderSpirV)),
-		m_fragShaderSpirV(std::move(other.m_fragShaderSpirV))
+		m_fragShaderSpirV(std::move(other.m_fragShaderSpirV)),
+		m_defines(std::move(other.m_defines))
 	{
+	}
+	Shader& Shader::operator=(const Shader& other)
+	{
+		m_vertShaderPath = other.m_vertShaderPath;
+		m_fragShaderPath = other.m_fragShaderPath;
+		m_vertShader = other.m_vertShader;
+		m_fragShader = other.m_fragShader;
+		m_vertexShaderSpirV = other.m_vertexShaderSpirV;
+		m_fragShaderSpirV = other.m_fragShaderSpirV;
+		m_defines = other.m_defines;
+		return *this;
 	}
 	Shader& Shader::operator=(Shader&& other) noexcept
 	{
@@ -99,6 +143,7 @@ namespace sge {
 		m_fragShader = std::move(other.m_fragShader);
 		m_vertexShaderSpirV = std::move(other.m_vertexShaderSpirV);
 		m_fragShaderSpirV = std::move(other.m_fragShaderSpirV);
+		m_defines = std::move(other.m_defines);
 		return *this;
 	}
 	const std::vector<uint32_t>& Shader::getVertexShader() const noexcept
@@ -118,6 +163,10 @@ namespace sge {
 	const std::string& Shader::getFragmentShaderPath() const noexcept
 	{
 		return m_fragShaderPath;
+	}
+	const ShaderDefines& Shader::getDefines() const noexcept
+	{
+		return m_defines;
 	}
 	const bool Shader::isValid() const noexcept
 	{

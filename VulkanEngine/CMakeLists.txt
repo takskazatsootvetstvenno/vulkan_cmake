@@ -53,4 +53,3 @@ target_include_directories(${CORE_PROJECT_NAME} PRIVATE src)
 target_link_libraries(${CORE_PROJECT_NAME} ${CONAN_LIBS})
 
 install(TARGETS ${CORE_PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/install)
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/data/Shaders DESTINATION ${CMAKE_INSTALL_PREFIX}/install)

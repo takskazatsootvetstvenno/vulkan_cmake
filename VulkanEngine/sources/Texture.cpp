@@ -5,8 +5,19 @@
 
 namespace sge
 {
+	enum CubemapTextures
+	{
+		back = 0,
+		front = 1,
+		bottom = 2,
+		top = 3,
+		right = 4,
+		left = 5
+	};
+
 	Texture::Texture(const std::string_view texturePath)
-		:m_texturePath(texturePath)
+		:m_texturePath(texturePath),
+		m_cubemapData{}
 	{
 		int texChannels;
 		stbi_set_flip_vertically_on_load(true);
@@ -17,6 +28,54 @@ namespace sge
 			LOG_ERROR("Failed to load texture: " << m_texturePath << "!")
 		}
 		m_imageSize = static_cast<size_t>(m_texWidth) * m_texHeight * 4;
+		m_textureType = TextureType::Texture2D;
+	}
+
+	Texture::Texture(CubemapData&& texturePath)
+		:m_cubemapPath(std::move(texturePath))
+	{
+		int texChannels;
+		stbi_set_flip_vertically_on_load(true);
+		m_cubemapData[CubemapTextures::back] = stbi_load(m_cubemapPath.backTexturePath.data(), &m_texWidth, &m_texHeight, &texChannels, STBI_rgb_alpha);
+		if (!m_cubemapData[CubemapTextures::back]) {
+			assert(false);
+			LOG_ERROR("Failed to load texture: " << m_cubemapPath.backTexturePath << "!")
+		}
+		m_cubemapData[front] = stbi_load(m_cubemapPath.frontTexturePath.data(), &m_texWidth, &m_texHeight, &texChannels, STBI_rgb_alpha);
+		if (!m_cubemapData[front]) {
+			assert(false);
+			LOG_ERROR("Failed to load texture: " << m_cubemapPath.frontTexturePath << "!")
+		}
+		
+		m_cubemapData[left] = stbi_load(m_cubemapPath.leftTexturePath.data(), &m_texWidth, &m_texHeight, &texChannels, STBI_rgb_alpha);
+		if (!m_cubemapData[left]) {
+			assert(false);
+			LOG_ERROR("Failed to load texture: " << m_cubemapPath.leftTexturePath << "!")
+		}
+		m_cubemapData[right] = stbi_load(m_cubemapPath.rightTexturePath.data(), &m_texWidth, &m_texHeight, &texChannels, STBI_rgb_alpha);
+		if (!m_cubemapData[right]) {
+			assert(false);
+			LOG_ERROR("Failed to load texture: " << m_cubemapPath.rightTexturePath << "!")
+		}
+		m_cubemapData[bottom] = stbi_load(m_cubemapPath.bottomTexturePath.data(), &m_texWidth, &m_texHeight, &texChannels, STBI_rgb_alpha);
+		if (!m_cubemapData[bottom]) {
+			assert(false);
+			LOG_ERROR("Failed to load texture: " << m_cubemapPath.bottomTexturePath << "!")
+		}
+		m_cubemapData[top] = stbi_load(m_cubemapPath.topTexturePath.data(), &m_texWidth, &m_texHeight, &texChannels, STBI_rgb_alpha);
+		if (!m_cubemapData[top]) {
+			assert(false);
+			LOG_ERROR("Failed to load texture: " << m_cubemapPath.topTexturePath << "!")
+		}
+		m_imageSize = static_cast<size_t>(m_texWidth) * m_texHeight * 4 * 6;
+		size_t singleImageSize = static_cast<size_t>(m_texWidth) * m_texHeight * 4;
+		m_dataCubemap.resize(m_imageSize);
+		for (int i = 0; i < 6; ++i)
+			memcpy(m_dataCubemap.data() + singleImageSize * i, m_cubemapData[i], singleImageSize);
+		m_data = m_dataCubemap.data();
+		for (int i = 0; i < 6; ++i)
+			stbi_image_free(m_cubemapData[i]);
+		m_textureType = TextureType::Cubemap;
 	}
 
 	const void* Texture::getData() const noexcept
@@ -41,7 +100,17 @@ namespace sge
 
 	void Texture::clearDataOnCPU() noexcept
 	{
-		stbi_image_free(m_data);
+		switch (m_textureType)
+		{
+		case sge::Texture::TextureType::Texture2D:
+			stbi_image_free(m_data);
+			break;
+		case sge::Texture::TextureType::Cubemap:
+			m_dataCubemap.clear();
+			m_dataCubemap.shrink_to_fit();
+			break;
+		}
+		
 		m_isCPUdataPresent = false;
 	}
 
@@ -78,6 +147,22 @@ namespace sge
 	void Texture::setSampler(VkSampler sampler) noexcept
 	{
 		m_sampler = sampler;
+	}
+
+	bool Texture::isProcessed() const noexcept
+	{
+		return (m_sampler != nullptr) && (m_imageView != nullptr) && (m_textureImage != nullptr);
+	}
+
+	std::array<void*, 6> Texture::getCubemapData() const noexcept
+	{
+		assert(m_textureType == TextureType::Cubemap);
+		return m_cubemapData;
+	}
+
+	Texture::TextureType Texture::getTextureType() const noexcept
+	{
+		return m_textureType;
 	}
 
 	VkDescriptorImageInfo Texture::getDescriptorInfo() const noexcept

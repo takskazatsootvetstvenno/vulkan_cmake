@@ -29,7 +29,7 @@ namespace sge {
     
     class App {
     public:
-        App();
+        App(glm::ivec2 windowSize, std::string windowName);
         ~App();
         App(const App&) = delete;
         App& operator=(const App&) = delete;
@@ -38,10 +38,11 @@ namespace sge {
         void loadModels(std::vector<Mesh>&& meshes);
     private:
 
-        void createPipeline(VkPipelineLayout& pipelineLayout, std::unique_ptr<Pipeline>& pipeline, Shader&& shader) noexcept;
+        void createPipeline(VkPipelineLayout& pipelineLayout, std::unique_ptr<Pipeline>& pipeline, Shader&& shader, FixedPipelineStates states = FixedPipelineStates()) noexcept;
         const VkPipelineLayout createPipeLineLayout(VkDescriptorSetLayout setLayout) noexcept;
         void renderObjects(VkCommandBuffer commandBuffer) noexcept;
         void initEvents() noexcept;
+        void addSkybox() noexcept;
         Window m_window{800, 600, "vulkan_window"};
         Device m_device{m_window};
         Renderer m_renderer{ m_window, m_device };

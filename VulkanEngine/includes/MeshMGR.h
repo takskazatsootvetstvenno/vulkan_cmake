@@ -17,6 +17,7 @@ namespace sge {
 
 	struct PipelineInfo
 	{
+		std::string name;
 		VkPipelineLayout pipelineLayout;
 		std::unique_ptr<Pipeline> pipeline;
 	};
@@ -37,6 +38,7 @@ namespace sge {
 		std::vector<PipelineInfo>      m_pipelines;
 		std::vector<DescriptorSetInfo> m_sets;
 		std::vector<Mesh>              m_meshes;
+		std::vector<Mesh>              m_systemMeshes;
 		std::unique_ptr<Buffer>        m_generalMatrixUBO;
 		std::unordered_map<std::string, Texture> m_textures;
 	private:

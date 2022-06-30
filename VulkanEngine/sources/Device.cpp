@@ -427,14 +427,17 @@ namespace sge {
             }
         }
         assert(false && "failed to find supported format!");
+        LOG_ERROR("failed to find supported format!")
+        return VK_FORMAT_UNDEFINED;
     }
 
-    [[nodiscard]] VkImageView Device::createImageView(const VkImage image, const VkFormat format) noexcept
+    [[nodiscard]] VkImageView Device::createImageView(const VkImage image, const VkFormat format, bool isCubeMap) noexcept
     {
+        uint32_t layerCount = isCubeMap? 6 : 1;
         VkImageViewCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         createInfo.image = image;
-        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.viewType = isCubeMap? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
         createInfo.format = format;
         createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -444,7 +447,7 @@ namespace sge {
         createInfo.subresourceRange.baseMipLevel = 0;
         createInfo.subresourceRange.levelCount = 1;
         createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount = 1;
+        createInfo.subresourceRange.layerCount = layerCount;
 
         VkImageView imageView;
         auto result = vkCreateImageView(m_device, &createInfo, nullptr, &imageView);
@@ -528,6 +531,8 @@ namespace sge {
             }
         }
         assert(false && "failed to find suitable memory type!");
+        LOG_ERROR("failed to find suitable memory type!")
+        return -1;
     }
 
     void Device::createImageWithInfo(
@@ -600,7 +605,7 @@ namespace sge {
         endSingleTimeCommands(commandBuffer);
     }
 
-    void Device::copyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, uint32_t width, uint32_t height) const {
+    void Device::copyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, uint32_t width, uint32_t height, uint32_t layerCount) const {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands();
         VkBufferImageCopy region{};
         region.bufferOffset = 0;
@@ -610,7 +615,7 @@ namespace sge {
         region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         region.imageSubresource.mipLevel = 0;
         region.imageSubresource.baseArrayLayer = 0;
-        region.imageSubresource.layerCount = 1;
+        region.imageSubresource.layerCount = layerCount;
 
         region.imageOffset = { 0, 0, 0 };
         region.imageExtent = {
@@ -630,7 +635,7 @@ namespace sge {
         endSingleTimeCommands(commandBuffer);
     }
 
-    void Device::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) const {
+    void Device::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount) const {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
         VkImageMemoryBarrier barrier{};
@@ -646,7 +651,7 @@ namespace sge {
         barrier.subresourceRange.baseMipLevel = 0;
         barrier.subresourceRange.levelCount = 1;
         barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
+        barrier.subresourceRange.layerCount = layerCount;
 
         VkPipelineStageFlags sourceStage;
         VkPipelineStageFlags destinationStage;

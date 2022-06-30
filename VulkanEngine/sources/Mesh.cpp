@@ -8,6 +8,9 @@ namespace sge {
 		m_vertexBuffer = std::move(other.m_vertexBuffer);
 		m_modelMatrix = std::move(other.m_modelMatrix);
 		m_material = std::move(other.m_material);
+		m_materialType = std::move(other.m_materialType);
+		m_pipelineId = std::move(other.m_pipelineId);
+		m_descriptorSetId = std::move(other.m_descriptorSetId);
 		return *this;
 	}
 	Mesh::Mesh(Mesh&& other) noexcept
@@ -17,7 +20,10 @@ namespace sge {
 		m_indexBuffer(std::move(other.m_indexBuffer)),
 		m_vertexBuffer(std::move(other.m_vertexBuffer)),
 		m_modelMatrix(std::move(other.m_modelMatrix)),
-		m_material(std::move(other.m_material))
+		m_material(std::move(other.m_material)),
+		m_materialType(std::move(other.m_materialType)),
+		m_pipelineId(std::move(other.m_pipelineId)),
+		m_descriptorSetId(std::move(other.m_descriptorSetId))
 	{
 	}
 	void Mesh::setModelMatrix(const glm::mat4& matrix)

@@ -18,7 +18,7 @@ constexpr glm::mat4 convertMatrix(const aiMatrix4x4& aiMat) noexcept {
              aiMat.a4, aiMat.b4, aiMat.c4, aiMat.d4 };
 }
 
-void processMesh(aiMesh* aiMesh, const aiScene* scene, std::vector<sge::Mesh>& meshes, glm::mat4 posMat) {
+void processMesh(aiMesh* aiMesh, const aiScene* scene, std::string_view basePath, std::vector<sge::Mesh>& meshes, glm::mat4 posMat) {
     sge::Mesh mesh;
     mesh.m_pos.resize(aiMesh->mNumVertices);
 
@@ -41,41 +41,52 @@ void processMesh(aiMesh* aiMesh, const aiScene* scene, std::vector<sge::Mesh>& m
     ai_material->Get(AI_MATKEY_ROUGHNESS_FACTOR, mesh.m_material.m_roughnessFactor);
     ai_material->Get(AI_MATKEY_EMISSIVE_INTENSITY, mesh.m_material.m_emissiveFactor);
 
-    aiColor3D baseColor;
+    aiColor3D baseColor(1.f,1.f,1.f);
     ai_material->Get(AI_MATKEY_BASE_COLOR, baseColor);
-    mesh.m_material.m_baseColor = glm::vec4{ baseColor[0], baseColor[1], baseColor[2], 1.f };
+    if (baseColor.IsBlack())
+        ai_material->Get(AI_MATKEY_COLOR_DIFFUSE, baseColor);
+    mesh.m_material.m_baseColor = { baseColor[0], baseColor[1], baseColor[2], 1.f };
 
     aiColor3D emissiveFactor;
     ai_material->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveFactor);
     mesh.m_material.m_emissiveFactor = glm::vec3{ emissiveFactor[0], emissiveFactor[1], emissiveFactor[2]};
-
-    mesh.m_material.m_hasColorMap = ai_material->GetTextureCount(aiTextureType_BASE_COLOR);
-    mesh.m_material.m_hasMetallicRoughnessMap = ai_material->GetTextureCount(aiTextureType_LIGHTMAP); //it is MetallicRoughnessMap
+    
+    mesh.m_material.m_hasColorMap = ai_material->GetTextureCount(aiTextureType_BASE_COLOR) || ai_material->GetTextureCount(aiTextureType_DIFFUSE);
+    //mesh.m_material.m_hasMetallicRoughnessMap = ai_material->GetTextureCount(aiTextureType_LIGHTMAP); //it is MetallicRoughnessMap??
+    mesh.m_material.m_hasMetallicRoughnessMap = ai_material->GetTextureCount(aiTextureType_UNKNOWN);
     mesh.m_material.m_hasEmissiveMap = ai_material->GetTextureCount(aiTextureType_EMISSIVE);
     mesh.m_material.m_hasNormalMap = ai_material->GetTextureCount(aiTextureType_NORMALS);
-    
-        aiString str1;
-    ai_material->GetTexture(aiTextureType_LIGHTMAP, 0, &str1);
 
+    aiString str1;
+    ai_material->GetTexture(aiTextureType_LIGHTMAP, 0, &str1);
+    
+    if (auto basePosPathToFile = basePath.find_last_of('/'); basePosPathToFile != basePath.npos)
+        basePath.remove_suffix(basePath.size() - basePosPathToFile - 1);
+    else
+        basePath = "";
     if (mesh.m_material.m_hasColorMap) {
         aiString str;
         ai_material->GetTexture(aiTextureType_BASE_COLOR, 0, &str);
-        mesh.m_material.m_baseColorPath = str.C_Str();
+        if (str.length == 0) {
+            ai_material->GetTexture(aiTextureType_DIFFUSE, 0, &str);
+        }
+        mesh.m_material.m_baseColorPath = std::string(basePath) + str.C_Str();
     }
     if (mesh.m_material.m_hasMetallicRoughnessMap) {
         aiString str;
-        ai_material->GetTexture(aiTextureType_LIGHTMAP, 0, &str);
-        mesh.m_material.m_MetallicRoughnessPath = str.C_Str();
+        //ai_material->GetTexture(aiTextureType_LIGHTMAP, 0, &str);
+        ai_material->GetTexture(aiTextureType_UNKNOWN, 0, &str);
+        mesh.m_material.m_MetallicRoughnessPath = std::string(basePath) + str.C_Str();
     }
     if (mesh.m_material.m_hasEmissiveMap) {
         aiString str;
         ai_material->GetTexture(aiTextureType_EMISSIVE, 0, &str);
-        mesh.m_material.m_EmissivePath = str.C_Str();
+        mesh.m_material.m_EmissivePath = std::string(basePath) + str.C_Str();
     }
     if (mesh.m_material.m_hasNormalMap) {
         aiString str;
         ai_material->GetTexture(aiTextureType_NORMALS, 0, &str);
-        mesh.m_material.m_NormalPath = str.C_Str();
+        mesh.m_material.m_NormalPath = std::string(basePath) + str.C_Str();
     }
 
     aiShadingMode mode;
@@ -89,6 +100,7 @@ void processMesh(aiMesh* aiMesh, const aiScene* scene, std::vector<sge::Mesh>& m
         mesh.m_materialType = sge::Mesh::MaterialType::PBR;
         break;
     default:
+        mesh.m_materialType = sge::Mesh::MaterialType::Phong;
         LOG_ERROR("Model loading: Unsupported shading model!");
         break;
     }
@@ -96,14 +108,14 @@ void processMesh(aiMesh* aiMesh, const aiScene* scene, std::vector<sge::Mesh>& m
     meshes.push_back(std::move(mesh));
 }
 
-void processNode(aiNode* node, const aiScene* scene, std::vector<sge::Mesh>& meshes, glm::mat4 const& parentMat = glm::mat4(1.0f))
+void processNode(aiNode* node, const aiScene* scene,  const std::string_view basePath, std::vector<sge::Mesh>& meshes, glm::mat4 const& parentMat = glm::mat4(1.0f))
 {
     for (unsigned int i = 0; i < node->mNumMeshes; i++) {
         aiMesh* aiMesh = scene->mMeshes[node->mMeshes[i]];
-        processMesh(aiMesh, scene, meshes, parentMat * convertMatrix(node->mTransformation));
+        processMesh(aiMesh, scene, basePath, meshes, parentMat * convertMatrix(node->mTransformation));
     }
     for (unsigned int i = 0; i < node->mNumChildren; i++) {
-        processNode(node->mChildren[i], scene, meshes, parentMat * convertMatrix(node->mTransformation));
+        processNode(node->mChildren[i], scene, basePath, meshes, parentMat * convertMatrix(node->mTransformation));
     }
 }
 
@@ -121,16 +133,17 @@ void load_model(sge::App& app, const std::string_view path, const glm::mat4 root
     }
   
     std::vector<sge::Mesh> meshes;
-    const auto m = rootMatrix * (glm::rotate(glm::mat4{ 1.f }, glm::radians(180.f), glm::vec3{ 1.f,0.f,0.f }));
-    processNode(scene->mRootNode, scene, meshes, m);
+    const auto m = rootMatrix * (glm::rotate(glm::mat4{ 1.f }, glm::radians(180.f), glm::vec3{ 1.f, 0.f, 0.f }));
+    processNode(scene->mRootNode, scene, path, meshes, m);
     app.loadModels(std::move(meshes));
 }
 
 int main() {
-    sge::App my_app;
-    //load_model(my_app, "METAL_SPHERES.gltf");
-    //load_model(my_app, "D:/temp/test_gltf/glTF-Sample-Models/2.0/WaterBottle/glTF/WaterBottle.gltf");
-    load_model(my_app, "WaterBottle.gltf");
+    sge::App my_app({800, 600 }, "Vulkan engine");
+    //load_model(my_app, "C:/Users/Denis/Documents/work_build/rendering-engine/cmake-build/install/bin/transparency.gltf");
+    load_model(my_app, "D:/temp/test_gltf/glTF-Sample-Models/2.0/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf");
+    //load_model(my_app, "D:/temp/test_obj/map.obj");
+    //load_model(my_app, "WaterBottle.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
     /*load_model(my_app,
         "Models/WaterBottle/WaterBottle.gltf",
         glm::translate(glm::mat4{ 1.f },

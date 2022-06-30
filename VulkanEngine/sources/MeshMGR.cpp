@@ -7,6 +7,7 @@ namespace sge {
 	void MeshMGR::clearTable() noexcept
 	{
 		m_meshes.clear();
+		m_systemMeshes.clear();
 		m_pipelines.clear();
 		m_sets.clear();
 		m_generalMatrixUBO = nullptr;
