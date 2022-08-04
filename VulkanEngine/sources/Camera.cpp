@@ -78,7 +78,6 @@ namespace sge
 
 	void Camera::setViewTarget(glm::vec3 position, glm::vec3 target, glm::vec3 up) {
 		setViewDirection(position, target - position, up);
-		//glm::lookAt(position, target, glm::vec3(0), up);
 	}
 
 	void Camera::setViewYXZ(glm::vec3 position, glm::vec3 rotation) {

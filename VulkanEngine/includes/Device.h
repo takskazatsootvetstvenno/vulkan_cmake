@@ -1,6 +1,6 @@
 #pragma once
-#include "volk.h"
-#define VK_NO_PROTOTYPES
+#include <vulkan/vulkan.h>
+//#define VK_NO_PROTOTYPES 
 #include <vector>
 #include "Window.h"
 namespace sge {
@@ -31,6 +31,9 @@ namespace sge {
         SwapChainSupportDetails getSwapChainSupport();
         QueueFamilyIndices findPhysicalQueueFamilies();
         VkDevice device() const noexcept;
+        VkPhysicalDevice getPhysicalDevice() const noexcept {
+            return m_physicalDevice;
+        }
         VkSurfaceKHR surface() const noexcept;
         VkQueue graphicsQueue() const noexcept;
         VkQueue presentQueue() const noexcept;
@@ -55,6 +58,8 @@ namespace sge {
         void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount = 1) const;
         uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
+        void endSingleTimeCommands(const VkCommandBuffer commandBuffer) const;
+        VkCommandBuffer beginSingleTimeCommands() const;
     private:
 
         void createInstance();
@@ -66,8 +71,6 @@ namespace sge {
         bool checkValidationLayerSupport();
         void createCommandPool();
 
-        void endSingleTimeCommands(const VkCommandBuffer commandBuffer) const;
-        VkCommandBuffer beginSingleTimeCommands() const;
 
         std::vector<const char*> getRequiredExtentions();
         QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);

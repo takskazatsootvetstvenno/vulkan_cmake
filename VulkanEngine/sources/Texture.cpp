@@ -20,7 +20,7 @@ namespace sge
 		m_cubemapData{}
 	{
 		int texChannels;
-		stbi_set_flip_vertically_on_load(true);
+		stbi_set_flip_vertically_on_load(false);
 		m_data = stbi_load(m_texturePath.c_str(), &m_texWidth, &m_texHeight, &texChannels, STBI_rgb_alpha);
 		if (!m_data)
 		{
@@ -38,34 +38,33 @@ namespace sge
 		stbi_set_flip_vertically_on_load(true);
 		m_cubemapData[CubemapTextures::back] = stbi_load(m_cubemapPath.backTexturePath.data(), &m_texWidth, &m_texHeight, &texChannels, STBI_rgb_alpha);
 		if (!m_cubemapData[CubemapTextures::back]) {
-			assert(false);
 			LOG_ERROR("Failed to load texture: " << m_cubemapPath.backTexturePath << "!")
+			assert(false);
 		}
 		m_cubemapData[front] = stbi_load(m_cubemapPath.frontTexturePath.data(), &m_texWidth, &m_texHeight, &texChannels, STBI_rgb_alpha);
 		if (!m_cubemapData[front]) {
-			assert(false);
 			LOG_ERROR("Failed to load texture: " << m_cubemapPath.frontTexturePath << "!")
+			assert(false);
 		}
-		
 		m_cubemapData[left] = stbi_load(m_cubemapPath.leftTexturePath.data(), &m_texWidth, &m_texHeight, &texChannels, STBI_rgb_alpha);
 		if (!m_cubemapData[left]) {
-			assert(false);
 			LOG_ERROR("Failed to load texture: " << m_cubemapPath.leftTexturePath << "!")
+			assert(false);
 		}
 		m_cubemapData[right] = stbi_load(m_cubemapPath.rightTexturePath.data(), &m_texWidth, &m_texHeight, &texChannels, STBI_rgb_alpha);
 		if (!m_cubemapData[right]) {
-			assert(false);
 			LOG_ERROR("Failed to load texture: " << m_cubemapPath.rightTexturePath << "!")
+			assert(false);
 		}
 		m_cubemapData[bottom] = stbi_load(m_cubemapPath.bottomTexturePath.data(), &m_texWidth, &m_texHeight, &texChannels, STBI_rgb_alpha);
 		if (!m_cubemapData[bottom]) {
-			assert(false);
 			LOG_ERROR("Failed to load texture: " << m_cubemapPath.bottomTexturePath << "!")
+			assert(false);
 		}
 		m_cubemapData[top] = stbi_load(m_cubemapPath.topTexturePath.data(), &m_texWidth, &m_texHeight, &texChannels, STBI_rgb_alpha);
 		if (!m_cubemapData[top]) {
-			assert(false);
 			LOG_ERROR("Failed to load texture: " << m_cubemapPath.topTexturePath << "!")
+			assert(false);
 		}
 		m_imageSize = static_cast<size_t>(m_texWidth) * m_texHeight * 4 * 6;
 		size_t singleImageSize = static_cast<size_t>(m_texWidth) * m_texHeight * 4;

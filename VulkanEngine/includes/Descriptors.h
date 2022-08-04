@@ -74,7 +74,7 @@ namespace sge {
         void freeDescriptors(std::vector<VkDescriptorSet>& descriptors) const;
 
         void resetPool();
-
+        const VkDescriptorPool getDescriptorPool() { return m_descriptorPool; }
     private:
         Device& m_device;
         VkDescriptorPool m_descriptorPool;

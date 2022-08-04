@@ -122,7 +122,7 @@ void processNode(aiNode* node, const aiScene* scene,  const std::string_view bas
 void load_model(sge::App& app, const std::string_view path, const glm::mat4 rootMatrix = glm::mat4{1.f})
 {
     Assimp::Importer importer;
-    auto scene = importer.ReadFile(path.data(), aiProcess_Triangulate);
+    auto scene = importer.ReadFile(path.data(), aiProcess_Triangulate | aiProcess_GenUVCoords | aiProcess_FlipUVs | aiProcess_GenNormals);
     if (scene == nullptr ||
         scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
         scene->mRootNode == nullptr)
@@ -134,6 +134,7 @@ void load_model(sge::App& app, const std::string_view path, const glm::mat4 root
   
     std::vector<sge::Mesh> meshes;
     const auto m = rootMatrix * (glm::rotate(glm::mat4{ 1.f }, glm::radians(180.f), glm::vec3{ 1.f, 0.f, 0.f }));
+    //auto& m = rootMatrix;
     processNode(scene->mRootNode, scene, path, meshes, m);
     app.loadModels(std::move(meshes));
 }
@@ -141,9 +142,13 @@ void load_model(sge::App& app, const std::string_view path, const glm::mat4 root
 int main() {
     sge::App my_app({800, 600 }, "Vulkan engine");
     //load_model(my_app, "C:/Users/Denis/Documents/work_build/rendering-engine/cmake-build/install/bin/transparency.gltf");
-    load_model(my_app, "D:/temp/test_gltf/glTF-Sample-Models/2.0/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf");
+    //load_model(my_app, "METAL_SPHERES/METAL_SPHERES.gltf");
     //load_model(my_app, "D:/temp/test_obj/map.obj");
-    //load_model(my_app, "WaterBottle.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
+    load_model(my_app, "Models/WaterBottle/WaterBottle.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
+    //load_model(my_app, "C:/Users/Denis/source/repos/vulkan_gltf_sasha_wil/data/models/Box/glTF-Embedded/Box.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
+    //load_model(my_app, "C:/Users/Denis/Downloads/glTF-Sample-Models-master (1)/glTF-Sample-Models-master/2.0/BoxTextured/glTF/BoxTextured.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
+    
+    //load_model(my_app, "C:/Users/Denis/Downloads/normal_map_test_-_manhole/scene.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
     /*load_model(my_app,
         "Models/WaterBottle/WaterBottle.gltf",
         glm::translate(glm::mat4{ 1.f },

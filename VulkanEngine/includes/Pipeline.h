@@ -7,6 +7,35 @@
 
 namespace sge {
     class Shader;
+    enum class CompareOp {
+        NEVER = 0,
+        LESS = 1,
+        EQUAL = 2,
+        LESS_OR_EQUAL = 3,
+        GREATER = 4,
+        NOT_EQUAL = 5,
+        GREATER_OR_EQUAL = 6,
+        ALWAYS = 7
+    };
+
+    enum class CullingMode {
+        NONE = 0,
+        FRONT = 0x00000001,
+        BACK = 0x00000002,
+        FRONT_AND_BACK = 0x00000003
+    };
+
+    enum class FrontFace {
+        COUNTER_CLOCKWISE = 0,
+        CLOCKWISE = 1
+    };
+    struct FixedPipelineStates //TO DO add enums and abstractions
+    {
+        bool depthWriteEnable = true;
+        CompareOp depthOp = CompareOp::LESS;
+        CullingMode cullingMode = CullingMode::BACK;
+        FrontFace frontFace = FrontFace::COUNTER_CLOCKWISE;
+    };
 	struct PipelineConfigInfo {
 		PipelineConfigInfo() = default;
         PipelineConfigInfo(const PipelineConfigInfo&) = delete;
@@ -26,18 +55,13 @@ namespace sge {
 		VkViewport viewport;
 		VkRect2D scissor;
         uint32_t subpass = 0;
+        FixedPipelineStates userDefinedStates;
 	};
-
-    struct FixedPipelineStates //TO DO add enums and abstractions
-    {
-        VkCompareOp depthOp = VK_COMPARE_OP_LESS;
-        bool depthWriteEnable = true;
-    };
-
+ 
 	class Pipeline
 	{
     public:
-        Pipeline(Device& device, Shader&& shader, const PipelineConfigInfo& configInfo);
+        Pipeline(Device& device, Shader&& shader, PipelineConfigInfo&& configInfo);
         Pipeline(const Pipeline&) = delete;
         Pipeline& operator=(const Pipeline&) = delete;
         Pipeline(Pipeline&&) = delete;
@@ -52,7 +76,7 @@ namespace sge {
 
     private:
         VkShaderModule createShaderModule(const std::vector<uint32_t>& code);
-        FixedPipelineStates m_states;
+        PipelineConfigInfo m_pipelineInfo;
         Device& m_device;
         Shader m_shader;
         VkPipeline m_graphicsPipeline;

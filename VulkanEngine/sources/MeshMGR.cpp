@@ -11,7 +11,9 @@ namespace sge {
 		m_pipelines.clear();
 		m_sets.clear();
 		m_generalMatrixUBO = nullptr;
-		setDescriptorPool(nullptr);
+		m_debugUBO = nullptr;
+		m_globalPool = {nullptr};
+		m_UIPool = {nullptr};
 	}
 	DescriptorPool& MeshMGR::getDescriptorPool() const
 	{

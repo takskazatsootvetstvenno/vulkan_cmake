@@ -17,6 +17,11 @@ namespace sge {
         glm::vec3 cameraPosition{ 0.f };
     };
 
+    struct DebugUBO
+    {
+        unsigned int outType = 0;
+    };
+
     struct PBRUbo
     {
         glm::mat4 modelMatrix{ 1.f };
@@ -43,6 +48,7 @@ namespace sge {
         void renderObjects(VkCommandBuffer commandBuffer) noexcept;
         void initEvents() noexcept;
         void addSkybox() noexcept;
+        void init_imgui();
         Window m_window{800, 600, "vulkan_window"};
         Device m_device{m_window};
         Renderer m_renderer{ m_window, m_device };

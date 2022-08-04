@@ -27,7 +27,6 @@ namespace sge {
 
 	void Shader::processShader(const ShaderType type, bool isHLSL) noexcept
 	{
-		shaderc::Compiler compiler;
 		shaderc::CompileOptions compilerOptions;
 		compilerOptions.SetOptimizationLevel(shaderc_optimization_level_performance);
 		compilerOptions.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
@@ -38,7 +37,7 @@ namespace sge {
 		const shaderc_source_language lang = isHLSL ? shaderc_source_language_hlsl : shaderc_source_language_glsl;
 		compilerOptions.SetSourceLanguage(lang);
 		shaderc::SpvCompilationResult result;
-		switch (type)
+		switch (shaderc::Compiler compiler; type)
 		{
 		case sge::Shader::ShaderType::VertexShader:
 			result = compiler.CompileGlslToSpv(m_vertShader, shaderc_vertex_shader, "sh.vert", "main", compilerOptions);
@@ -54,7 +53,7 @@ namespace sge {
 			m_fragShaderSpirV = { result.cbegin(), result.cend() };
 			break;
 		}
-		if (result.GetCompilationStatus())
+		if (result.GetCompilationStatus() != shaderc_compilation_status_success)
 		{
 			LOG_ERROR("Error message: " << result.GetErrorMessage());
 			LOG_ERROR("Shader compile status: " << result.GetCompilationStatus());

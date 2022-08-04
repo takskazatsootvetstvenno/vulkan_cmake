@@ -47,7 +47,7 @@ namespace sge {
     }
     uint32_t SwapChain::width() const noexcept
     {
-       return m_swapChainExtent.width; 
+        return m_swapChainExtent.width; 
     }
     uint32_t SwapChain::height() const noexcept
     {
@@ -125,17 +125,15 @@ namespace sge {
     VkExtent2D SwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
         if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) 
             return capabilities.currentExtent;
-        else {
-            VkExtent2D actualExtent = m_windowExtent;
-            actualExtent.width = std::max(
-                capabilities.minImageExtent.width,
-                std::min(capabilities.maxImageExtent.width, actualExtent.width));
-            actualExtent.height = std::max(
-                capabilities.minImageExtent.height,
-                std::min(capabilities.maxImageExtent.height, actualExtent.height));
+        VkExtent2D actualExtent = m_windowExtent;
+        actualExtent.width = std::max(
+            capabilities.minImageExtent.width,
+            std::min(capabilities.maxImageExtent.width, actualExtent.width));
+        actualExtent.height = std::max(
+            capabilities.minImageExtent.height,
+            std::min(capabilities.maxImageExtent.height, actualExtent.height));
 
-            return actualExtent;
-        }
+        return actualExtent;
     }
     void SwapChain::createSwapChain() {
         SwapChainSupportDetails swapChainSupport = m_device.getSwapChainSupport();
@@ -387,8 +385,9 @@ namespace sge {
     }
 
     void SwapChain::createFramebuffers() {
-        m_swapChainFramebuffers.resize(imageCount());
-        for (size_t i = 0; i < imageCount(); ++i) {
+        auto image_count = imageCount();
+        m_swapChainFramebuffers.resize(image_count);
+        for (size_t i = 0; i < image_count; ++i) {
             std::array<VkImageView, 2> attachments = { m_swapChainImageViews[i], m_depthImageViews[i] };
 
             VkExtent2D swapChainExtent = m_swapChainExtent;
@@ -406,8 +405,7 @@ namespace sge {
                 &framebufferInfo,
                 nullptr,
                 &m_swapChainFramebuffers[i]);
-            if (result != VK_SUCCESS)
-            {
+            if (result != VK_SUCCESS) {
                 LOG_ERROR("failed to create framebuffer!\nError: " << getErrorNameFromEnum(result) << " | " << result)
                 assert(false);
             }

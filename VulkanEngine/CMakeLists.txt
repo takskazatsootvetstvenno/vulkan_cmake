@@ -44,6 +44,10 @@ set(CORE_SOURCES
 add_library(${CORE_PROJECT_NAME} STATIC
 	${CORE_INCLUDES}
 	${CORE_SOURCES}
+	../../bindings/imgui_impl_glfw.cpp
+	../../bindings/imgui_impl_vulkan.cpp
+	../../bindings/imgui_impl_glfw.h
+	../../bindings/imgui_impl_vulkan.h
 )
 set_property( DIRECTORY PROPERTY VS_STARTUP_PROJECT VulkanEngine )
 target_compile_features(${CORE_PROJECT_NAME} PUBLIC cxx_std_20)

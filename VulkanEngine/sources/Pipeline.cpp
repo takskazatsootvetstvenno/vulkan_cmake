@@ -4,12 +4,61 @@
 #include "Logger.h"
 #include "VulkanHelpUtils.h"
 #include <cassert>
-namespace sge {
 
-	Pipeline::Pipeline(Device& device, Shader&& shader, const PipelineConfigInfo& configInfo)
-		:m_device(device), m_shader(std::move(shader)){
+namespace sge {
+	constexpr VkCompareOp toVulkanCompareOp(const CompareOp op) noexcept
+	{
+		switch (op)
+		{
+		case CompareOp::NEVER:
+			return VkCompareOp::VK_COMPARE_OP_NEVER;
+		case CompareOp::LESS:
+			return VkCompareOp::VK_COMPARE_OP_LESS;
+		case CompareOp::EQUAL:
+			return VkCompareOp::VK_COMPARE_OP_EQUAL;
+		case CompareOp::LESS_OR_EQUAL:
+			return VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
+		case CompareOp::GREATER:
+			return VkCompareOp::VK_COMPARE_OP_GREATER;
+		case CompareOp::NOT_EQUAL:
+			return VkCompareOp::VK_COMPARE_OP_NOT_EQUAL;
+		case CompareOp::GREATER_OR_EQUAL:
+			return VkCompareOp::VK_COMPARE_OP_GREATER_OR_EQUAL;
+		case CompareOp::ALWAYS:
+			return VkCompareOp::VK_COMPARE_OP_ALWAYS;
+		}
+		return VkCompareOp::VK_COMPARE_OP_NEVER;;
+	}
+	constexpr VkCullModeFlagBits toVulkanCullingMode(const CullingMode mode) noexcept
+	{
+		switch (mode)
+		{
+		case sge::CullingMode::NONE:
+			return VkCullModeFlagBits::VK_CULL_MODE_NONE;
+		case sge::CullingMode::FRONT:
+			return VkCullModeFlagBits::VK_CULL_MODE_FRONT_BIT;
+		case sge::CullingMode::BACK:
+			return VkCullModeFlagBits::VK_CULL_MODE_BACK_BIT;
+		case sge::CullingMode::FRONT_AND_BACK:
+			return VkCullModeFlagBits::VK_CULL_MODE_FRONT_AND_BACK;
+		}
+		return VkCullModeFlagBits::VK_CULL_MODE_NONE;
+	}
+	constexpr VkFrontFace toVulkanFrontFace(const FrontFace face) noexcept
+	{
+		switch (face)
+		{
+		case sge::FrontFace::COUNTER_CLOCKWISE:
+			return VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		case sge::FrontFace::CLOCKWISE:
+			return VkFrontFace::VK_FRONT_FACE_CLOCKWISE;
+		}
+		return VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	}
+
+	Pipeline::Pipeline(Device& device, Shader&& shader, PipelineConfigInfo&& configInfo)
+		:m_device(device), m_shader(std::move(shader)), m_pipelineInfo(std::move(configInfo)){
 		crateGraphicsPipeline(configInfo);
-		m_states.depthOp = configInfo.depthStencilInfo.depthCompareOp;
 	}
 
 	const Shader& Pipeline::getShader() const noexcept
@@ -130,7 +179,7 @@ namespace sge {
 
 	FixedPipelineStates Pipeline::getPipelineStates() const noexcept
 	{
-		return m_states;
+		return m_pipelineInfo.userDefinedStates;
 	}
 
 	PipelineConfigInfo Pipeline::createDefaultPipeline(uint32_t width, uint32_t height, FixedPipelineStates states)
@@ -155,8 +204,8 @@ namespace sge {
 		configInfo.rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
 		configInfo.rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
 		configInfo.rasterizationInfo.lineWidth = 1.0f;
-		configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-		configInfo.rasterizationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; //VK_FRONT_FACE_CLOCKWISE;
+		configInfo.rasterizationInfo.cullMode = toVulkanCullingMode(states.cullingMode);
+		configInfo.rasterizationInfo.frontFace = toVulkanFrontFace(states.frontFace);
 		configInfo.rasterizationInfo.depthBiasEnable = VK_FALSE;
 		configInfo.rasterizationInfo.depthBiasConstantFactor = 0.f;
 		configInfo.rasterizationInfo.depthBiasClamp = 0.f;
@@ -173,14 +222,14 @@ namespace sge {
 		configInfo.depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 		configInfo.depthStencilInfo.depthTestEnable = VK_TRUE;
 		configInfo.depthStencilInfo.depthWriteEnable = states.depthWriteEnable;
-		configInfo.depthStencilInfo.depthCompareOp = states.depthOp;
+		configInfo.depthStencilInfo.depthCompareOp = toVulkanCompareOp(states.depthOp);
 		configInfo.depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
 		configInfo.depthStencilInfo.minDepthBounds = 0.f;
 		configInfo.depthStencilInfo.maxDepthBounds = 1.f;
 		configInfo.depthStencilInfo.stencilTestEnable = VK_FALSE;
 		configInfo.depthStencilInfo.front = {};
 		configInfo.depthStencilInfo.back = {};
-
+		configInfo.userDefinedStates = states;
 		return configInfo;
 	}
 

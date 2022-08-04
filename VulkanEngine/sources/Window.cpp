@@ -5,7 +5,7 @@
 
 #include <cassert>
 namespace sge {
-    Window::Window(int width, int height, std::string name) noexcept
+    Window::Window(int width, int height, const std::string& name) noexcept
         : m_width(width), m_height(height), m_windowName(name) {
         init();
     }
@@ -52,8 +52,8 @@ namespace sge {
     }
 
     void Window::init() noexcept {
-        int initGLFW = glfwInit();
-        if (initGLFW != GLFW_TRUE)
+        
+        if (int initGLFW = glfwInit(); initGLFW != GLFW_TRUE)
         {
             LOG_ERROR("Can't init GLFW!")
             assert(false);

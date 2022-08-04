@@ -1,7 +1,6 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
-
 #include <glm/glm.hpp>
 #include <array>
 #include "App.h"
@@ -12,11 +11,14 @@
 #include "Buffer.h"
 #include "VulkanHelpUtils.h"
 #include <vector>
+#include <array>
 #include <chrono>
 #include <numeric>
 #include <iterator>
 #include "Shader.h"
 #include "Texture.h"
+#include "../../../bindings/imgui_impl_glfw.h"
+#include "../../../bindings/imgui_impl_vulkan.h"
 
 namespace sge {
     App::App(glm::ivec2 windowSize, std::string windowName)
@@ -40,8 +42,19 @@ namespace sge {
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
                 );
         mgr.m_generalMatrixUBO->map();
+        mgr.m_debugUBO = std::make_unique<Buffer>(
+            m_device,
+            sizeof(DebugUBO),
+            100,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+            );
+        mgr.m_debugUBO->map();
         m_model = std::make_unique<Model>(m_device);
         addSkybox();
+        auto brdfLUT = mgr.m_textures.try_emplace("brdfLUT", "data/brdfLUT.png");
+        if (!brdfLUT.first->second.isProcessed())
+            m_model->createTexture(brdfLUT.first->second);
     }
 
     App::~App()
@@ -169,13 +182,14 @@ namespace sge {
     {
         Texture::CubemapData skyboxInfo
         {
-            .frontTexturePath = "Skybox/front.jpg",
-            .backTexturePath = "Skybox/back.jpg",
-            .topTexturePath = "Skybox/top.jpg",
-            .bottomTexturePath = "Skybox/bottom.jpg",
-            .leftTexturePath = "Skybox/left.jpg",
-            .rightTexturePath = "Skybox/right.jpg"
+            .frontTexturePath = "data/Skybox/front.jpg",
+            .backTexturePath = "data/Skybox/back.jpg",
+            .topTexturePath = "data/Skybox/top.jpg",
+            .bottomTexturePath = "data/Skybox/bottom.jpg",
+            .leftTexturePath = "data/Skybox/left.jpg",
+            .rightTexturePath = "data/Skybox/right.jpg"
         };
+
         float skyboxVertices[] = {
             // positions          
             -1.0f,  1.0f, -1.0f,
@@ -242,13 +256,13 @@ namespace sge {
             .writeImage(8, &skyboxDescriptorInfo)
             .build(descriptorSet);
 
-        if (Shader glslSkyboxShader("Shaders/GLSL/Skybox/skybox.vert", "Shaders/GLSL/Skybox/skybox.frag", { "", "" }); glslSkyboxShader.isValid())
+        if (Shader glslSkyboxShader("data/Shaders/GLSL/Skybox/skybox.vert", "data/Shaders/GLSL/Skybox/skybox.frag", { "", "" }); glslSkyboxShader.isValid())
         {
             auto pipelineLayoutSkybox = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
             mgr.m_pipelines.emplace_back(std::to_string(mgr.m_pipelines.size()) + " skybox_GLSL", pipelineLayoutSkybox, nullptr);
             FixedPipelineStates states{
-                .depthOp = VK_COMPARE_OP_LESS_OR_EQUAL,
-                .depthWriteEnable = false
+                .depthWriteEnable = false,
+                .depthOp = CompareOp::LESS_OR_EQUAL
             };
             createPipeline(pipelineLayoutSkybox, mgr.m_pipelines.back().pipeline, std::move(glslSkyboxShader), states);
             skyboxMesh.m_pipelineId = mgr.m_pipelines.size() - 1;
@@ -261,26 +275,71 @@ namespace sge {
         );
         skyboxMesh.m_descriptorSetId = mgr.m_sets.size() - 1;
         mgr.m_systemMeshes.emplace_back(std::move(skyboxMesh));
+        Texture::CubemapData skyboxIrradiance
+        {
+            .frontTexturePath = "data/Skybox/Irradiance/0.bmp",
+            .backTexturePath = "data/Skybox/Irradiance/1.bmp",
+            .topTexturePath = "data/Skybox/Irradiance/3.bmp",
+            .bottomTexturePath = "data/Skybox/Irradiance/2.bmp",
+            .leftTexturePath = "data/Skybox/Irradiance/4.bmp",
+            .rightTexturePath = "data/Skybox/Irradiance/5.bmp"
+        };
+        auto envIrradiancePair = mgr.m_textures.try_emplace("skybox_irradiance", std::move(skyboxIrradiance));
+        if (!envIrradiancePair.first->second.isProcessed())
+            m_model->createTexture(envIrradiancePair.first->second);
     }
     void App::run() {
         m_model->createBuffers();
         auto& mgr = MeshMGR::Instance();
-
+        init_imgui();
+        const std::array table { "Default", "getNormal()", "NormalTexture", "UV", "VertexNormal", "worldPos_in"};
+        int currentItem = 0;
         while (!m_window.shouldClose()) {
             glfwPollEvents();
+            ImGui_ImplVulkan_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+            ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x * 0.25f, ImGui::GetIO().DisplaySize.y * 0.25f), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+            ImGui::Begin("Debug window");
+            ImGui::ListBox("Shader Output", &currentItem, table.data(), table.size());
+            ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+            if (ImGui::TreeNode("Pipelines")) {
+                for (const auto& pipeline : mgr.m_pipelines) {
+                    if (ImGui::TreeNode(pipeline.name.c_str())) {
+                        ImGui::Separator();
+                        ImGui::Text(std::string("Vertex shader path:\n" + pipeline.pipeline->getShader().getVertexShaderPath()).c_str());
+                        ImGui::Text(std::string("Fragment shader path:\n" + pipeline.pipeline->getShader().getFragmentShaderPath()).c_str());
+                        ImGui::Separator();
+                        ImGui::Text(std::string("Vert defines:\n" + pipeline.pipeline->getShader().getDefines().vertShaderDefines).c_str());
+                        ImGui::Text(std::string("Frag defines:\n" + pipeline.pipeline->getShader().getDefines().fragmentShaderDefines).c_str());
+                        ImGui::TreePop();
+                    }
+                }
+                ImGui::TreePop();
+            }
+            ImGui::End();
+            ImGui::Render();
             if (auto commandBuffer = m_renderer.beginFrame())
             {
                 //update global variables
-                GlobalUbo ubo{};
-                ubo.projection = m_camera.getProjection();
-                ubo.view = m_camera.getView();
-                ubo.cameraPosition = m_camera.getCameraPos();
+                GlobalUbo ubo{
+                    .projection = m_camera.getProjection(),
+                    .view = m_camera.getView(),
+                    .cameraPosition = m_camera.getCameraPos()
+                };
                 mgr.m_generalMatrixUBO->writeToBuffer(&ubo);
                 mgr.m_generalMatrixUBO->flush();
+                //Debug debug UBO
+                DebugUBO debugUBO{
+                    .outType = static_cast<unsigned int>(currentItem)
+                };
+                mgr.m_debugUBO->writeToBuffer(&debugUBO);
+                mgr.m_debugUBO->flush();
 
                 //render
                 m_renderer.beginSwapChainRenderPass(commandBuffer);
                 renderObjects(commandBuffer);
+                ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
                 m_renderer.endSwapChainRenderPass(commandBuffer);
                 if (m_renderer.endFrame() == true)
                     for (auto& pipeline : mgr.m_pipelines)
@@ -291,6 +350,9 @@ namespace sge {
             }
         }
         vkDeviceWaitIdle(m_device.device());
+        ImGui_ImplVulkan_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
     }
 
     const VkPipelineLayout App::createPipeLineLayout(VkDescriptorSetLayout setLayout) noexcept {
@@ -304,14 +366,60 @@ namespace sge {
         pipelineLayoutInfo.pPushConstantRanges = nullptr;
         auto result = vkCreatePipelineLayout(m_device.device(), &pipelineLayoutInfo, nullptr,
             &pipelineLayout);
-        if (result != VK_SUCCESS)
-        {
+        if (result != VK_SUCCESS) {
             LOG_ERROR("failed to create pipeline layout\nError: " << getErrorNameFromEnum(result) << " | " << result)
             assert(false);
         }
         return pipelineLayout;
     }
+    
+    void App::init_imgui()
+    {
+        IMGUI_CHECKVERSION();
 
+        MeshMGR::Instance().m_UIPool = DescriptorPool::Builder(m_device)
+            .setMaxSets(1024)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_SAMPLER, 1024)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1024)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1024)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1024)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1024)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1024)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1024)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1024)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1024)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1024)
+            .build();
+        // 2: initialize imgui library
+
+        //this initializes the core structures of imgui
+        ImGui::CreateContext();
+
+        //this initializes imgui for SDL
+        ImGui_ImplGlfw_InitForVulkan(m_window.getHandle(), true);
+
+        //this initializes imgui for Vulkan
+        ImGui_ImplVulkan_InitInfo init_info = {};
+        init_info.Instance = m_device.getInstance();
+        init_info.PhysicalDevice = m_device.getPhysicalDevice();
+        init_info.Device = m_device.device();
+        init_info.Queue = m_device.graphicsQueue();
+        init_info.DescriptorPool = MeshMGR::Instance().m_UIPool->getDescriptorPool();
+        init_info.MinImageCount = 3;
+        init_info.ImageCount = 3;
+        init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+
+        auto CB = m_device.beginSingleTimeCommands();
+        ImGui_ImplVulkan_Init(&init_info, m_renderer.getSwapChainRenderPass());
+
+        //execute a gpu command to upload imgui font textures
+        ImGui_ImplVulkan_CreateFontsTexture(CB);
+        m_device.endSingleTimeCommands(CB);
+
+        //clear font textures from cpu data
+        ImGui_ImplVulkan_DestroyFontUploadObjects();
+    }
+    
     void App::loadModels(std::vector<Mesh>&& meshess)
     {
         auto& mgr = MeshMGR::Instance();
@@ -325,14 +433,15 @@ namespace sge {
                 1,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-            );
+                );
             uboBuffer->map();
 
             auto descriptorLayoutBuilder = DescriptorSetLayout::Builder(m_device)
                 .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-                .addBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+                .addBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+                .addBinding(100, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT); //debug
 
-            if (mesh.m_material.m_hasColorMap) 
+            if (mesh.m_material.m_hasColorMap)
                 descriptorLayoutBuilder.addBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
             if (mesh.m_material.m_hasMetallicRoughnessMap)
                 descriptorLayoutBuilder.addBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -341,19 +450,23 @@ namespace sge {
             if (mesh.m_material.m_hasEmissiveMap)
                 descriptorLayoutBuilder.addBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
+            descriptorLayoutBuilder.addBinding(8, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);  //skybox map
+            descriptorLayoutBuilder.addBinding(9, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);  //skybox irradiance map
+            descriptorLayoutBuilder.addBinding(10, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT); //brdfLUT
+
             auto descriptorLayout = descriptorLayoutBuilder.build();
 
             auto globalBufferInfo = mgr.m_generalMatrixUBO->descriptorInfo();
             auto bufferInfo = uboBuffer->descriptorInfo();
-
+            auto debuggerBufferInfo = mgr.m_debugUBO->descriptorInfo();
             auto DW = DescriptorWriter(*descriptorLayout, mgr.getDescriptorPool())
                 .writeBuffer(0, &globalBufferInfo)
-                .writeBuffer(1, &bufferInfo);
-
+                .writeBuffer(1, &bufferInfo)
+                .writeBuffer(100, &debuggerBufferInfo); //debug
             std::string defines;
             if (mesh.m_material.m_hasColorMap) {
                 auto baseColorPair = mgr.m_textures.try_emplace(mesh.m_material.m_baseColorPath, mesh.m_material.m_baseColorPath);
-                if(!baseColorPair.first->second.isProcessed())
+                if (!baseColorPair.first->second.isProcessed())
                     m_model->createTexture(baseColorPair.first->second);
                 auto textureInfo = baseColorPair.first->second.getDescriptorInfo();
                 DW.writeImage(2, &textureInfo);
@@ -385,6 +498,31 @@ namespace sge {
                 DW.writeImage(5, &textureInfo);
                 defines += "#define HAS_EMISSIVE_MAP\n";
             }
+
+            {
+                auto skyboxPair = mgr.m_textures.find("skybox");
+                if (skyboxPair == mgr.m_textures.end()) {
+                    LOG_ERROR("Skybox texture is missing!");
+                    assert(false && "Skybox texture is missing!");
+                }
+                auto skyboxDescriptorInfo = skyboxPair->second.getDescriptorInfo();
+                DW.writeImage(8, &skyboxDescriptorInfo);
+                auto skyboxIrradiancePair = mgr.m_textures.find("skybox_irradiance");
+                if (skyboxIrradiancePair == mgr.m_textures.end()) {
+                    LOG_ERROR("skybox_irradiance texture is missing!");
+                    assert(false && "skybox_irradiance texture is missing!");
+                }
+                auto skyboxIrradianceDescriptorInfo = skyboxIrradiancePair->second.getDescriptorInfo();
+                DW.writeImage(9, &skyboxIrradianceDescriptorInfo);
+                auto brdfLUT = mgr.m_textures.find("brdfLUT");
+                if (brdfLUT == mgr.m_textures.end()) {
+                    LOG_ERROR("brdfLUT texture is missing!");
+                    assert(false && "brdfLUT texture is missing!");
+                }
+                auto brdfLUTDescriptorInfo = brdfLUT->second.getDescriptorInfo();
+                DW.writeImage(10, &brdfLUTDescriptorInfo);
+
+            }
             switch (mesh.m_materialType)
             {
             case Mesh::MaterialType::Phong:
@@ -410,7 +548,7 @@ namespace sge {
                 switch (mesh.m_materialType)
                 {
                 case Mesh::MaterialType::Phong:
-                    if (Shader glslPhongShader("Shaders/GLSL/Phong/phong.vert", "Shaders/GLSL/Phong/phong.frag", { "", defines}); glslPhongShader.isValid())
+                    if (Shader glslPhongShader("data/Shaders/GLSL/Phong/phong.vert", "data/Shaders/GLSL/Phong/phong.frag", { "", defines}); glslPhongShader.isValid())
                     {
                         auto pipelineLayoutGLSLPhong = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
                         mgr.m_pipelines.emplace_back(std::to_string(mgr.m_pipelines.size()) + " Phong_GLSL", pipelineLayoutGLSLPhong, nullptr);
@@ -420,7 +558,7 @@ namespace sge {
                     }
                     break;
                 case Mesh::MaterialType::PBR:
-                    if (Shader glslPBRShader("Shaders/GLSL/PBR/PBR.vert", "Shaders/GLSL/PBR/PBR.frag", { "", defines}); glslPBRShader.isValid())
+                    if (Shader glslPBRShader("data/Shaders/GLSL/PBR/PBR.vert", "data/Shaders/GLSL/PBR/PBR.frag", { "", defines}); glslPBRShader.isValid())
                     {
                         auto pipelineLayoutGLSLPBR = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
                         mgr.m_pipelines.emplace_back(std::to_string(mgr.m_pipelines.size()) + " PBR_GLSL", pipelineLayoutGLSLPBR, nullptr);
@@ -428,8 +566,8 @@ namespace sge {
                         createPipeline(pipelineLayoutGLSLPBR, mgr.m_pipelines.back().pipeline, std::move(glslPBRShader));
                         LOG_MSG("Pipeline name: " << mgr.m_pipelines[mesh.m_pipelineId].name << ": " << mgr.m_pipelines[mesh.m_pipelineId].pipeline->getShader().getFragmentShaderPath());
                     }
-#if 1
-                    if (Shader glslPhongShader("Shaders/GLSL/Phong/phong.vert", "Shaders/GLSL/Phong/phong.frag", { "", defines + "#define TESTPHONG" }); glslPhongShader.isValid())
+#if 0
+                    if (Shader glslPhongShader("data/Shaders/GLSL/Phong/phong.vert", "data/Shaders/GLSL/Phong/phong.frag", { "", defines + "#define TESTPHONG" }); glslPhongShader.isValid())
                     {
                         auto pipelineLayoutGLSLPhong = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
                         mgr.m_pipelines.emplace_back(std::to_string(mgr.m_pipelines.size()) + " Phong_GLSL", pipelineLayoutGLSLPhong, nullptr);
@@ -479,7 +617,7 @@ namespace sge {
         pipeline = std::make_unique<Pipeline>(
             m_device,
             std::move(shader),
-            pipeline_config);
+            std::move(pipeline_config));
         LOG_MSG("New Pipeline has been created!");
     }
 }  // namespace sge

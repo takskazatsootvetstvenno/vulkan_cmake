@@ -61,7 +61,6 @@ namespace sge {
         }
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
         vkDestroyInstance(m_instance, nullptr);
-      
     }
 
     bool Device::checkValidationLayerSupport() {
@@ -221,7 +220,6 @@ namespace sge {
                 LOG_MSG_FLUSH
             assert(false);
         }
-        volkLoadDevice(m_device);   //only for one device!!!!!
         vkGetDeviceQueue(m_device, indices.graphicsFamily, 0, &m_graphicsQueue);
         vkGetDeviceQueue(m_device, indices.presentFamily, 0, &m_presentQueue);
     }
@@ -297,8 +295,6 @@ namespace sge {
     }
 
     void Device::createInstance() {
-        auto vulk = volkInitialize();
-        assert(vulk == VK_SUCCESS && "Can't initialize volk loader!");
         uint32_t impl_support;
         vkEnumerateInstanceVersion(&impl_support);
         LOG_MSG("Supported vulkan version: "
@@ -360,7 +356,7 @@ namespace sge {
             LOG_ERROR("Failed to create a vulkan instance!\nError: "  << getErrorNameFromEnum(result) << " : " << result);
             assert(false);
         }
-        volkLoadInstance(m_instance);
+        //volkLoadInstance(m_instance);
     }
 
     std::vector<const char*> Device::getRequiredExtentions() {

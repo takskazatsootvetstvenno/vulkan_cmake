@@ -1,7 +1,7 @@
 #pragma once
-#include "volk.h"
 #include "Device.h"
 #include <array>
+
 namespace sge {
     class SwapChain {
     public:

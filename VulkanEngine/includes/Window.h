@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "volk.h"
+#include <vulkan/vulkan_core.h>
 #include "Event.h"
 struct GLFWwindow;
 namespace sge {
@@ -8,7 +8,7 @@ namespace sge {
     class Window {
     public:
         using EventCallbackFn = std::function<void(BaseEvent&)>;
-        Window(int width, int height, std::string name) noexcept;
+        Window(int width, int height, const std::string& name) noexcept;
         ~Window();
         Window(const Window&) = delete;
         Window(Window&&) = delete;
@@ -24,6 +24,9 @@ namespace sge {
         void set_event_callback(const EventCallbackFn& callback)
         {
             m_eventCallback = callback;
+        }
+        GLFWwindow* getHandle() {
+            return m_pWindow;
         }
     private:
         static void frameResizeCallback(GLFWwindow* window, int width, int height) noexcept;

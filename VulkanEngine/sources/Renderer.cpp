@@ -57,7 +57,7 @@ namespace sge {
         if (result != VK_SUCCESS)
         {
             LOG_ERROR("Failed to allocate command buffers!\nError: " << getErrorNameFromEnum(result) << " | " << result)
-                assert(false);
+            assert(false);
         }
         if (m_device.enableValidationLayers()) {
             SetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(
@@ -165,7 +165,7 @@ namespace sge {
     }
     void Renderer::endSwapChainRenderPass(VkCommandBuffer commandBuffer) noexcept
     {
-        assert(m_isFrameStarted && "can't call endSwapChainRenderPass if frame is not in progress");
+        assert(m_isFrameStarted && "Can't call endSwapChainRenderPass if frame is not in progress");
         assert(commandBuffer == getCurrentCommandBuffer() && "Can't end render pass on command buffer from a different frame");
         vkCmdEndRenderPass(commandBuffer);
     }
