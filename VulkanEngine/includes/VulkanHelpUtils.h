@@ -1,5 +1,10 @@
 #pragma once
 #include <vulkan/vulkan_core.h>
+#include <Logger.h>
+#include <cassert>
+#define VK_CHECK_RESULT(result, errorText) {\
+    if(result != VK_SUCCESS) {LOG_ERROR(errorText << "\nError: " << getErrorNameFromEnum(result) << " | " << result); assert(false && errorText);}};
+
 namespace sge {
     constexpr inline const char* getErrorNameFromEnum(const VkResult result) noexcept
     {

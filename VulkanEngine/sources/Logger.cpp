@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <chrono>
+
 namespace sge {
 	static std::ofstream out_stream;
 
@@ -30,7 +31,7 @@ namespace sge {
 		out_stream << buf << m_ss.rdbuf() << "\n";
 		m_ss.str("");
 	}
-	void Logger::flush() noexcept
+	void Logger::flush() const noexcept
 	{
 		std::cout << std::flush;
 		out_stream << std::flush;

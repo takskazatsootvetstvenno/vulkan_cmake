@@ -53,11 +53,13 @@ namespace sge {
 
         void setModelMatrix(const glm::mat4& matrix);
         void setModelMatrix(glm::mat4&& matrix);
+        void setName(const std::string_view newName) noexcept;
         const glm::mat4& getModelMatrix() const;
         uint32_t getVertexCount() const;
         uint32_t getIndexCount() const;
         uint32_t getPipelineId() const;
         uint32_t getDescriptorSetId() const;
+        const std::string& getName() const noexcept;
         std::vector<Vertex>     m_pos;
         std::vector<uint32_t>   m_ind;
         std::unique_ptr<Buffer> m_vertexBuffer;
@@ -67,6 +69,7 @@ namespace sge {
         uint32_t  m_descriptorSetId = 0;
         Material  m_material;
         MaterialType m_materialType{MaterialType::Phong};
+        std::string m_name = "Default mesh";
     private:
         glm::mat4 m_modelMatrix{ 1.f };
     };

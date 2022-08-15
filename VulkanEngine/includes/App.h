@@ -22,6 +22,12 @@ namespace sge {
         unsigned int outType = 0;
     };
 
+    struct NormalTestInfo
+    {
+        glm::mat4 modelMatrix = glm::mat4{};
+        float magnitude = 1.f;
+    };
+
     struct PBRUbo
     {
         glm::mat4 modelMatrix{ 1.f };
@@ -48,6 +54,7 @@ namespace sge {
         void renderObjects(VkCommandBuffer commandBuffer) noexcept;
         void initEvents() noexcept;
         void addSkybox() noexcept;
+        void addNormalTestPipeline() noexcept;
         void init_imgui();
         Window m_window{800, 600, "vulkan_window"};
         Device m_device{m_window};
@@ -55,6 +62,10 @@ namespace sge {
         std::unique_ptr<Model> m_model;
         Camera m_camera;
         EventDispatcher m_eventDispatcher;
+        bool m_useNormalPipeline = false;
+        size_t m_normalPipelineID = -1;
+        size_t m_normalPipelineDescriptorSetID = 0;
+        float m_normalMagnitude = 0.2f;
     };
 
 } 

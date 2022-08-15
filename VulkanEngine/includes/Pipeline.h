@@ -35,6 +35,7 @@ namespace sge {
         CompareOp depthOp = CompareOp::LESS;
         CullingMode cullingMode = CullingMode::BACK;
         FrontFace frontFace = FrontFace::COUNTER_CLOCKWISE;
+
     };
 	struct PipelineConfigInfo {
 		PipelineConfigInfo() = default;
@@ -73,6 +74,7 @@ namespace sge {
         void bind(VkCommandBuffer commandBuffer) const noexcept;
         FixedPipelineStates getPipelineStates() const noexcept;
         static PipelineConfigInfo createDefaultPipeline(uint32_t width, uint32_t height, FixedPipelineStates states);
+        bool recreatePipelineShaders();
 
     private:
         VkShaderModule createShaderModule(const std::vector<uint32_t>& code);

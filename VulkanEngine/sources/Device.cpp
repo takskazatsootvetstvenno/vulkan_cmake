@@ -147,10 +147,10 @@ namespace sge {
                                 !swapChainSupport.presentModes.empty();
             VkPhysicalDeviceFeatures supportedFeatures;
             vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
-            
             if (QueueFamilyIndices indices = findQueueFamilies(device);
                 ExtFound && indices.isComplete() && swapChainAdequate &&
-                supportedFeatures.samplerAnisotropy) {
+                supportedFeatures.samplerAnisotropy &&
+                supportedFeatures.geometryShader) {
                 LOG_MSG("Device used:")
                 LOG_MSG(" * " << deviceProperties.deviceName << " with vulkan version: "
                     << VK_API_VERSION_MAJOR(deviceProperties.apiVersion) << "."
@@ -186,6 +186,7 @@ namespace sge {
         }
         VkPhysicalDeviceFeatures deviceFeatures = {};
         deviceFeatures.samplerAnisotropy = VK_TRUE;
+        deviceFeatures.geometryShader = VK_TRUE;
 
         VkDeviceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -351,12 +352,7 @@ namespace sge {
             instanceCreateInfo.pNext = nullptr;
         }
         VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &m_instance);
-        if (result != VK_SUCCESS)
-        {
-            LOG_ERROR("Failed to create a vulkan instance!\nError: "  << getErrorNameFromEnum(result) << " : " << result);
-            assert(false);
-        }
-        //volkLoadInstance(m_instance);
+        VK_CHECK_RESULT(result, "Failed to create a vulkan instance!")
     }
 
     std::vector<const char*> Device::getRequiredExtentions() {
@@ -447,11 +443,7 @@ namespace sge {
 
         VkImageView imageView;
         auto result = vkCreateImageView(m_device, &createInfo, nullptr, &imageView);
-        if (result != VK_SUCCESS)
-        {
-            LOG_ERROR("failed to create image views!\nError: " << getErrorNameFromEnum(result) << " | " << result)
-            assert(false);
-        }
+        VK_CHECK_RESULT(result, "Failed to create image views!")
         return imageView;
     }
 
@@ -459,10 +451,7 @@ namespace sge {
     {
         VkSampler textureSampler;
         auto result = vkCreateSampler(m_device, &sampleInfo, nullptr, &textureSampler);
-        if (result != VK_SUCCESS) {
-            LOG_ERROR("Failed to create texture sampler!");
-            assert(false);
-        }
+        VK_CHECK_RESULT(result, "Failed to create texture sampler!")
         return textureSampler;
     }
 
@@ -476,11 +465,7 @@ namespace sge {
             VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
         auto result = vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool);
-        if (result != VK_SUCCESS)
-        {
-            LOG_ERROR("failed to create command pool!\nError: " << getErrorNameFromEnum(result) << " : " << result);
-            assert(false);
-        }
+        VK_CHECK_RESULT(result, "failed to create command pool!")
     }
 
     void Device::endSingleTimeCommands(const VkCommandBuffer commandBuffer) const
@@ -538,7 +523,7 @@ namespace sge {
         VkDeviceMemory& imageMemory)
     {
         auto result = vkCreateImage(m_device, &imageInfo, nullptr, &image);
-        assert(result == VK_SUCCESS && "failed to create image!");
+        VK_CHECK_RESULT(result, "Failed to create image!")
 
         VkMemoryRequirements memRequirements;
         vkGetImageMemoryRequirements(m_device, image, &memRequirements);
@@ -549,10 +534,9 @@ namespace sge {
         allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
         result = vkAllocateMemory(m_device, &allocInfo, nullptr, &imageMemory);
-        assert(result == VK_SUCCESS && "failed to allocate image memory!");
-
+        VK_CHECK_RESULT(result, "Failed to allocate image memory!")
         result = vkBindImageMemory(m_device, image, imageMemory, 0);
-        assert(result == VK_SUCCESS && "failed to bind image memory!");
+        VK_CHECK_RESULT(result, "Failed to bind image memory!")
     }
 
     void Device::createBuffer(
@@ -568,11 +552,7 @@ namespace sge {
         bufferInfo.usage = usage;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         auto result = vkCreateBuffer(m_device, &bufferInfo, nullptr, &buffer);
-        if (result != VK_SUCCESS)
-        {
-            LOG_ERROR("Failed to create vertex buffer!\nError: " << getErrorNameFromEnum(result) << " : " << result);
-            assert(false);
-        }   
+        VK_CHECK_RESULT(result, "Failed to create vertex buffer!")
         VkMemoryRequirements memRequirements;
         vkGetBufferMemoryRequirements(m_device, buffer, &memRequirements);
         
@@ -581,11 +561,7 @@ namespace sge {
         allocInfo.allocationSize = memRequirements.size;
         allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
         result = vkAllocateMemory(m_device, &allocInfo, nullptr, &bufferMemory);
-        if (result != VK_SUCCESS)
-        {
-            LOG_ERROR("Failed to allocate vertex buffer memory!\nError: " << getErrorNameFromEnum(result) << " : " << result);
-            assert(false);
-        }
+        VK_CHECK_RESULT(result, "Failed to allocate vertex buffer memory!")
         vkBindBufferMemory(m_device, buffer, bufferMemory, 0);
     }
 
@@ -694,11 +670,7 @@ namespace sge {
                                  VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         createInfo.pfnUserCallback = debugCallback;
         createInfo.pUserData = nullptr;
-        auto createResult = CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debugMessenger);
-        if (createResult != VK_SUCCESS)
-        {
-            LOG_ERROR("failed to set up debug messenger!\nError: " << getErrorNameFromEnum(createResult) << " : " << createResult);
-            assert(false);
-        }
+        auto result = CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debugMessenger);
+        VK_CHECK_RESULT(result, "Failed to set up debug messenger!")
     }
 }  // namespace sge

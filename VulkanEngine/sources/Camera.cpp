@@ -123,7 +123,7 @@ namespace sge
 			glm::vec3(0.f, 0.f, 0.f));
 	}
 
-	void Camera::changeCircleHeight(float add_value)
+	void Camera::changeCircleHeight(const float add_value)
 	{
 		m_circle_height += add_value;
 		setViewTarget(

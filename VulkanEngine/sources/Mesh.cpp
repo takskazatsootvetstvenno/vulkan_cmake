@@ -11,6 +11,7 @@ namespace sge {
 		m_materialType = std::move(other.m_materialType);
 		m_pipelineId = std::move(other.m_pipelineId);
 		m_descriptorSetId = std::move(other.m_descriptorSetId);
+		m_name = std::move(other.m_name);
 		return *this;
 	}
 	Mesh::Mesh(Mesh&& other) noexcept
@@ -23,7 +24,8 @@ namespace sge {
 		m_material(std::move(other.m_material)),
 		m_materialType(std::move(other.m_materialType)),
 		m_pipelineId(std::move(other.m_pipelineId)),
-		m_descriptorSetId(std::move(other.m_descriptorSetId))
+		m_descriptorSetId(std::move(other.m_descriptorSetId)),
+		m_name(std::move(other.m_name))
 	{
 	}
 	void Mesh::setModelMatrix(const glm::mat4& matrix)
@@ -33,6 +35,10 @@ namespace sge {
 	void Mesh::setModelMatrix(glm::mat4&& matrix)
 	{
 		m_modelMatrix = std::move(matrix);
+	}
+	void Mesh::setName(const std::string_view newName) noexcept
+	{
+		m_name = newName;
 	}
 	const glm::mat4& Mesh::getModelMatrix() const
 	{
@@ -53,6 +59,10 @@ namespace sge {
 	uint32_t Mesh::getDescriptorSetId() const
 	{
 		return m_descriptorSetId;
+	}
+	const std::string& Mesh::getName() const noexcept
+	{
+		return m_name;
 	}
 	/*static*/ std::vector<VkVertexInputBindingDescription> Vertex::getBindingDescription() noexcept{
 		std::vector<VkVertexInputBindingDescription> bindingDescriptions =

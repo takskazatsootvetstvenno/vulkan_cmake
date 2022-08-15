@@ -32,11 +32,7 @@ namespace sge {
     void Window::createWindowSurface(VkInstance instance, VkSurfaceKHR* surface) noexcept
     {
         auto result = glfwCreateWindowSurface(instance, m_pWindow, nullptr, surface);
-        if (result != VK_SUCCESS)
-        {
-            LOG_ERROR("Failed to create window surface!\nError= " << getErrorNameFromEnum(result) << " | " << result)
-            assert(false);
-        }
+        VK_CHECK_RESULT(result, "Failed to create window surface!")
     }
 
     void Window::closeWindow() noexcept
@@ -64,7 +60,7 @@ namespace sge {
         if (m_pWindow == nullptr)
         {
             LOG_ERROR("Can't create GLFW window!")
-                assert(false);
+            assert(false);
         }
 
         glfwSetWindowUserPointer(m_pWindow, this);

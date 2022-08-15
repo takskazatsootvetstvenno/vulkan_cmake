@@ -73,8 +73,11 @@ namespace sge {
 
 		const auto& vertCode = m_shader.getVertexShader();
 		const auto& fragCode = m_shader.getFragmentShader();
-		auto vertShaderModule = createShaderModule(vertCode);
-		auto fragShaderModule = createShaderModule(fragCode);
+		const auto& geometryCode = m_shader.isGeometryShaderPresent() ? m_shader.getGeometryShader() : std::vector<uint32_t>();
+
+		VkShaderModule vertShaderModule = createShaderModule(vertCode);
+		VkShaderModule fragShaderModule = createShaderModule(fragCode);
+		VkShaderModule geomShaderModule = m_shader.isGeometryShaderPresent() ? createShaderModule(geometryCode) : VkShaderModule{};
 
 		VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
 		vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -94,7 +97,18 @@ namespace sge {
 		fragShaderStageInfo.pNext = nullptr;
 		fragShaderStageInfo.pSpecializationInfo = nullptr;
 
-		VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+		VkPipelineShaderStageCreateInfo geometryShaderStageInfo{};
+		if (m_shader.isGeometryShaderPresent())
+		{
+			geometryShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			geometryShaderStageInfo.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+			geometryShaderStageInfo.module = geomShaderModule;
+			geometryShaderStageInfo.pName = "main";
+			geometryShaderStageInfo.flags = 0;
+			geometryShaderStageInfo.pNext = nullptr;
+			geometryShaderStageInfo.pSpecializationInfo = nullptr;
+		}
+		VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo, geometryShaderStageInfo };
 
 		auto bindingsDescriptions = Vertex::getBindingDescription();
 		auto attributeDescriptions = Vertex::getAttributeDescription();
@@ -138,7 +152,7 @@ namespace sge {
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = 2;
+		pipelineInfo.stageCount = m_shader.isGeometryShaderPresent() ? 3 : 2;
 		pipelineInfo.pStages = shaderStages;
 		pipelineInfo.pVertexInputState = &vertexInputInfo;
 		pipelineInfo.pInputAssemblyState = &configInfo.inputAssemblyInfo;
@@ -164,13 +178,11 @@ namespace sge {
 			&pipelineInfo,
 			nullptr,
 			&m_graphicsPipeline);
-		if (result != VK_SUCCESS)
-		{
-			LOG_ERROR("failed to create graphics pipeline\nError: " << getErrorNameFromEnum(result) << " | " << result)
-			assert(false);
-		}
+		VK_CHECK_RESULT(result, "Failed to create graphics pipeline")
 		vkDestroyShaderModule(m_device.device(), vertShaderModule, nullptr);
 		vkDestroyShaderModule(m_device.device(), fragShaderModule, nullptr);
+		if(m_shader.isGeometryShaderPresent())
+			vkDestroyShaderModule(m_device.device(), geomShaderModule, nullptr);
 	}
 
 	void Pipeline::bind(VkCommandBuffer commandBuffer) const noexcept{
@@ -233,6 +245,23 @@ namespace sge {
 		return configInfo;
 	}
 
+	bool Pipeline::recreatePipelineShaders()
+	{
+		Shader newShader(m_shader.getVertexShaderPath(), m_shader.getFragmentShaderPath(), m_shader.getGeometryShaderPath(), m_shader.getDefines());
+		if (newShader.isValid() == true) {
+			m_shader = std::move(newShader);
+			vkDeviceWaitIdle(m_device.device());
+			vkDestroyPipeline(m_device.device(), m_graphicsPipeline, nullptr);
+			crateGraphicsPipeline(m_pipelineInfo);
+		}
+		else
+		{
+			LOG_ERROR("Can't recreate shaders in pipeline! Used last suitable shader")
+			return false;
+		}
+		return true;
+	}
+
 	VkShaderModule Pipeline::createShaderModule(const std::vector<uint32_t>& code) {
 		VkShaderModuleCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -240,11 +269,7 @@ namespace sge {
 		createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 		VkShaderModule shaderModule;
 		auto result = vkCreateShaderModule(m_device.device(), &createInfo, nullptr, &shaderModule);
-		if (result != VK_SUCCESS)
-		{
-			LOG_ERROR("Failed to create shader module")
-			assert(false);
-		}
+		VK_CHECK_RESULT(result, "Failed to create shader module!")
 		return shaderModule;
 	}
 	Pipeline::~Pipeline()

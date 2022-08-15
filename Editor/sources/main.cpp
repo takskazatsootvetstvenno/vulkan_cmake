@@ -59,7 +59,9 @@ void processMesh(aiMesh* aiMesh, const aiScene* scene, std::string_view basePath
 
     aiString str1;
     ai_material->GetTexture(aiTextureType_LIGHTMAP, 0, &str1);
-    
+    static size_t meshID = 0;
+    mesh.setName(std::to_string(meshID) + " | " + std::string(basePath));
+    ++meshID;
     if (auto basePosPathToFile = basePath.find_last_of('/'); basePosPathToFile != basePath.npos)
         basePath.remove_suffix(basePath.size() - basePosPathToFile - 1);
     else
@@ -142,9 +144,10 @@ void load_model(sge::App& app, const std::string_view path, const glm::mat4 root
 int main() {
     sge::App my_app({800, 600 }, "Vulkan engine");
     //load_model(my_app, "C:/Users/Denis/Documents/work_build/rendering-engine/cmake-build/install/bin/transparency.gltf");
-    //load_model(my_app, "METAL_SPHERES/METAL_SPHERES.gltf");
+    //load_model(my_app, "Models/METAL_SPHERES/METAL_SPHERES.gltf");
     //load_model(my_app, "D:/temp/test_obj/map.obj");
     load_model(my_app, "Models/WaterBottle/WaterBottle.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
+    //load_model(my_app, "Models/pbr_test_sphere/scene.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(1.f, 1.f, 1.f)));
     //load_model(my_app, "C:/Users/Denis/source/repos/vulkan_gltf_sasha_wil/data/models/Box/glTF-Embedded/Box.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
     //load_model(my_app, "C:/Users/Denis/Downloads/glTF-Sample-Models-master (1)/glTF-Sample-Models-master/2.0/BoxTextured/glTF/BoxTextured.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
     

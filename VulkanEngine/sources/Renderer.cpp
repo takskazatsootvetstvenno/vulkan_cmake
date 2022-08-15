@@ -54,11 +54,7 @@ namespace sge {
         allocInfo.commandPool = m_device.getCommandPool();
         allocInfo.commandBufferCount = static_cast<uint32_t>(m_commandBuffers.size());
         auto result = vkAllocateCommandBuffers(m_device.device(), &allocInfo, m_commandBuffers.data());
-        if (result != VK_SUCCESS)
-        {
-            LOG_ERROR("Failed to allocate command buffers!\nError: " << getErrorNameFromEnum(result) << " | " << result)
-            assert(false);
-        }
+        VK_CHECK_RESULT(result, "Failed to allocate command buffers!")
         if (m_device.enableValidationLayers()) {
             SetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(
                 m_device.getInstance(),
@@ -98,11 +94,7 @@ namespace sge {
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
         result = vkBeginCommandBuffer(commandBuffer, &beginInfo);
-        if (result != VK_SUCCESS)
-        {
-            LOG_ERROR("failed to begin recording command buffer!\nError: " << getErrorNameFromEnum(result) << " | " << result)
-            assert(false);
-        }
+        VK_CHECK_RESULT(result, "Failed to begin recording command buffer!")
         return commandBuffer;
     }
 
@@ -117,11 +109,8 @@ namespace sge {
         assert(m_isFrameStarted && "Can't call endFrame while frame is not in progress");
         auto commandBuffer = getCurrentCommandBuffer();
         
-        if (auto result = vkEndCommandBuffer(commandBuffer); result != VK_SUCCESS)
-        {
-            LOG_ERROR("Failed to record command buffer\nError: " << getErrorNameFromEnum(result) << " | " << result)
-            assert(false);
-        }
+        VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer), "Failed to record command buffer!")
+
         if(auto result = m_swapChain->submitCommandBuffers(&commandBuffer, &m_currentImageIndex);
             result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_window.framebufferResized()) 
         {
@@ -129,11 +118,8 @@ namespace sge {
             recreateSwapChain();
             needCreateNewPipeline = true;
         }
-        else if(result != VK_SUCCESS)
-        {
-            LOG_ERROR("failed to present swapChain image!\nError: " << getErrorNameFromEnum(result) << " | " << result)
-            assert(false);
-        }
+        else 
+            VK_CHECK_RESULT(result, "Failed to present swapChain image")
         m_isFrameStarted = false;
         m_currentFrameIndex = (m_currentFrameIndex + 1) % SwapChain::MAX_FRAMES_IN_FLIGHT;
         return needCreateNewPipeline;

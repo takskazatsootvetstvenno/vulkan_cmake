@@ -174,11 +174,7 @@ namespace sge {
         createInfo.clipped = VK_TRUE;
         createInfo.oldSwapchain = VK_NULL_HANDLE;
         auto result = vkCreateSwapchainKHR(m_device.device(), &createInfo, nullptr, &m_swapChain);
-        if (result != VK_SUCCESS)
-        {
-            LOG_ERROR("failed to create swap chain!\nError: "<< getErrorNameFromEnum(result) << " | " << result)
-            assert(false);
-        }
+        VK_CHECK_RESULT(result, "Failed to create swap chain!")
         vkGetSwapchainImagesKHR(m_device.device(), m_swapChain, &imageCount, nullptr);
         m_swapChainImages.resize(imageCount);
         vkGetSwapchainImagesKHR(m_device.device(), m_swapChain, &imageCount, m_swapChainImages.data());
@@ -236,11 +232,7 @@ namespace sge {
             viewInfo.subresourceRange.layerCount = 1;
 
             auto result = vkCreateImageView(m_device.device(), &viewInfo, nullptr, &m_depthImageViews[i]);
-            if (result != VK_SUCCESS)
-            {
-                LOG_ERROR("failed to create texture image view!\nError: " << getErrorNameFromEnum(result) << " | " << result)
-                assert(false);
-            }
+            VK_CHECK_RESULT(result, "Failed to create texture image view!")
         }
     }
 
@@ -296,12 +288,7 @@ namespace sge {
 
         auto result = vkQueueSubmit(m_device.graphicsQueue(), 1, &submitInfo, m_inFlightFences[m_currentFrame]);//Отправляем командный буффер, причём в waitStages будет стоять семофор ожидающий
                                                                                                                 //конца чтения изображения из presentEngine(сигнал конца vkAcquireNextImageKHR даёт в виде семофора),
-        assert(result == VK_SUCCESS && "failed to submit draw command buffer!");                                
-        if (result != VK_SUCCESS)
-        {
-            LOG_ERROR("failed to submit draw command buffer!\nError: " << getErrorNameFromEnum(result) << " | " << result)
-            assert(false);
-        }
+        VK_CHECK_RESULT(result, "Failed to submit draw command buffer!")
         VkPresentInfoKHR presentInfo = {};                                                                      //а после того как все команды буффера исполнятся будет взведён fence, означающий, что буффер пуст
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
@@ -377,11 +364,7 @@ namespace sge {
         renderPassInfo.pDependencies = &dependency;
 
         auto result = vkCreateRenderPass(m_device.device(), &renderPassInfo, nullptr, &m_renderPass);
-        if (result != VK_SUCCESS)
-        {
-            LOG_ERROR("failed to create render pass!\nError: " << getErrorNameFromEnum(result) << " | " << result)
-            assert(false);
-        }
+        VK_CHECK_RESULT(result, "Failed to create render pass!")
     }
 
     void SwapChain::createFramebuffers() {
@@ -405,10 +388,7 @@ namespace sge {
                 &framebufferInfo,
                 nullptr,
                 &m_swapChainFramebuffers[i]);
-            if (result != VK_SUCCESS) {
-                LOG_ERROR("failed to create framebuffer!\nError: " << getErrorNameFromEnum(result) << " | " << result)
-                assert(false);
-            }
+            VK_CHECK_RESULT(result, "Failed to create framebuffer!")
         }
     }
 }

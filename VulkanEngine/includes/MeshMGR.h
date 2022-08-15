@@ -41,6 +41,7 @@ namespace sge {
 		std::vector<Mesh>              m_systemMeshes;
 		std::unique_ptr<Buffer>        m_generalMatrixUBO;
 		std::unique_ptr<Buffer>        m_debugUBO;
+		std::unique_ptr<Buffer>        m_normalTestUBO;
 		std::unordered_map<std::string, Texture> m_textures;
 		std::unique_ptr<DescriptorPool> m_UIPool{};
 	private:

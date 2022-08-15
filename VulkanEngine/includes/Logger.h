@@ -13,7 +13,7 @@ namespace sge {
 		[[nodiscard]] std::stringstream& log() noexcept;
 		void flush_error() noexcept;
 		void flush_info() noexcept;
-		void flush() noexcept;
+		void flush() const noexcept;
 		static Logger& Instance() noexcept;
 	private:
 		Logger();

@@ -209,7 +209,7 @@ void main() {
 		outColor = vec4(pow(color, vec3(1.f/gamma)), 1.f);
 		break;
 	case 1:
-		outColor = vec4(getNormal(), 1.f);
+		outColor = (vec4(getNormal(), 1.f) + 1.f) / 2.f;
 		break;
 	case 2:
 #ifdef HAS_NORMAL_MAP
@@ -217,13 +217,13 @@ void main() {
 #endif
 		break;
 	case 3:
-		outColor = vec4(texCoords_in, 0.f, 0.f);		
+		outColor = (vec4(texCoords_in, 0.f, 0.f) + 1.f) /2.f;		
 		break;
 	case 4:
-		outColor = vec4(normalize(norm_in), 1.f);
+		outColor = (vec4(normalize(norm_in), 1.f) + 1.f) / 2.f;
 		break;
 	case 5:
-		outColor = vec4(normalize(worldPos_in), 1.f);
+		outColor = (vec4(normalize(worldPos_in), 1.f) + 1.f) / 2.f;
 		break;
 	}
 }

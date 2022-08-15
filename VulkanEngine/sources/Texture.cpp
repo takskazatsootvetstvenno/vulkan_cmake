@@ -159,7 +159,7 @@ namespace sge
 		return m_cubemapData;
 	}
 
-	Texture::TextureType Texture::getTextureType() const noexcept
+	const Texture::TextureType Texture::getTextureType() const noexcept
 	{
 		return m_textureType;
 	}

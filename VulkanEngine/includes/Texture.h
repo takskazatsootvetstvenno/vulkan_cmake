@@ -1,9 +1,9 @@
 #pragma once
 #include <string_view>
+#include <vulkan/vulkan_core.h>
 #include <memory>
-#include <Buffer.h>
 #include <vector>
-
+#include <array>
 namespace sge
 {
 	class Texture
@@ -38,13 +38,12 @@ namespace sge
 		void setSampler(VkSampler sampler) noexcept;
 		bool isProcessed() const noexcept;
 		std::array<void*, 6> getCubemapData() const noexcept;
-		TextureType getTextureType() const noexcept;
+		const TextureType getTextureType() const noexcept;
 		VkDescriptorImageInfo getDescriptorInfo() const noexcept;
 		VkSampler getSampler() noexcept;
 		VkImage getTextureImage() noexcept;
 		VkDeviceMemory getTextureImageMemory() noexcept;
 		VkImageView getImageView() noexcept;
-		std::unique_ptr<Buffer> m_texBuffer;
 		
 	private:
 		void* m_data;

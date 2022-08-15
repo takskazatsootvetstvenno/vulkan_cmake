@@ -34,6 +34,10 @@ add_custom_command(TARGET ${EDITOR_PROJECT_NAME}
 	
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Phong/phong.frag     ${PROJECT_BINARY_DIR}/Editor/data/Shaders/GLSL/Phong/phong.frag
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Phong/phong.vert     ${PROJECT_BINARY_DIR}/Editor/data/Shaders/GLSL/Phong/phong.vert
+    
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Normal/normal.frag   ${PROJECT_BINARY_DIR}/Editor/data/Shaders/GLSL/Normal/normal.frag
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Normal/normal.vert   ${PROJECT_BINARY_DIR}/Editor/data/Shaders/GLSL/Normal/normal.vert	
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Normal/normal.geom   ${PROJECT_BINARY_DIR}/Editor/data/Shaders/GLSL/Normal/normal.geom	
 
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Skybox/skybox.frag   ${PROJECT_BINARY_DIR}/Editor/data/Shaders/GLSL/Skybox/skybox.frag
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Skybox/skybox.vert   ${PROJECT_BINARY_DIR}/Editor/data/Shaders/GLSL/Skybox/skybox.vert

@@ -19,6 +19,7 @@
 #include "Texture.h"
 #include "../../../bindings/imgui_impl_glfw.h"
 #include "../../../bindings/imgui_impl_vulkan.h"
+#include <cstdio>
 
 namespace sge {
     App::App(glm::ivec2 windowSize, std::string windowName)
@@ -45,13 +46,22 @@ namespace sge {
         mgr.m_debugUBO = std::make_unique<Buffer>(
             m_device,
             sizeof(DebugUBO),
-            100,
+            1,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
             );
         mgr.m_debugUBO->map();
+        mgr.m_normalTestUBO = std::make_unique<Buffer>(
+            m_device,
+            sizeof(NormalTestInfo),
+            1,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+            );
+        mgr.m_normalTestUBO->map();
         m_model = std::make_unique<Model>(m_device);
         addSkybox();
+        addNormalTestPipeline();
         auto brdfLUT = mgr.m_textures.try_emplace("brdfLUT", "data/brdfLUT.png");
         if (!brdfLUT.first->second.isProcessed())
             m_model->createTexture(brdfLUT.first->second);
@@ -95,7 +105,32 @@ namespace sge {
             m_model->bind(commandBuffer, mesh);
             m_model->draw(commandBuffer, mesh);
         }
-        for (auto& systemMesh : mgr.m_systemMeshes)
+        if(m_useNormalPipeline)
+            for (auto& mesh : mgr.m_meshes)
+            {
+                //update normalTest UBO
+                NormalTestInfo normalUBO{
+                    .modelMatrix = mesh.getModelMatrix(),
+                    .magnitude = m_normalMagnitude
+                };
+                mgr.m_normalTestUBO->writeToBuffer(&normalUBO);
+                mgr.m_normalTestUBO->flush();
+
+                mgr.m_pipelines[m_normalPipelineID].pipeline->bind(commandBuffer);
+                vkCmdBindDescriptorSets(
+                    commandBuffer,
+                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    mgr.m_pipelines[m_normalPipelineID].pipelineLayout,
+                    0,
+                    1,
+                    &mgr.m_sets[m_normalPipelineDescriptorSetID].set,
+                    0,
+                    nullptr);
+
+                m_model->bind(commandBuffer, mesh);
+                m_model->draw(commandBuffer, mesh);
+            }
+        for (const auto& systemMesh : mgr.m_systemMeshes)
         {
             mgr.m_pipelines[systemMesh.getPipelineId()].pipeline->bind(commandBuffer);
 
@@ -178,6 +213,43 @@ namespace sge {
             }
         );
     }
+    void App::addNormalTestPipeline() noexcept
+    {
+        auto& mgr = MeshMGR::Instance();
+        auto descriptorLayout = DescriptorSetLayout::Builder(m_device)
+            .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT)
+            .addBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT)
+            .build();
+        auto globalBufferInfo = mgr.m_generalMatrixUBO->descriptorInfo();
+        auto normalBufferInfo = mgr.m_normalTestUBO->descriptorInfo();
+        VkDescriptorSet descriptorSet;
+        auto DW = DescriptorWriter(*descriptorLayout, mgr.getDescriptorPool())
+            .writeBuffer(0, &globalBufferInfo)
+            .writeBuffer(1, &normalBufferInfo)
+            .build(descriptorSet);
+
+        if (Shader glslNormalShader(
+            "data/Shaders/GLSL/Normal/normal.vert",
+            "data/Shaders/GLSL/Normal/normal.frag",
+            "data/Shaders/GLSL/Normal/normal.geom");
+            glslNormalShader.isValid())
+        {
+            auto pipelineLayoutSkybox = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
+            m_normalPipelineID = mgr.m_pipelines.size();
+            mgr.m_pipelines.emplace_back(std::to_string(m_normalPipelineID) + " Normal_test", pipelineLayoutSkybox, nullptr);
+            FixedPipelineStates states{
+               .cullingMode = CullingMode::NONE
+            };
+            createPipeline(pipelineLayoutSkybox, mgr.m_pipelines.back().pipeline, std::move(glslNormalShader), std::move(states));
+            LOG_MSG("Pipeline name: " << mgr.m_pipelines.back().name << ": " << mgr.m_pipelines.back().pipeline->getShader().getFragmentShaderPath());
+        }
+        mgr.m_sets.emplace_back(
+            std::move(descriptorLayout),
+            nullptr,
+            descriptorSet
+        );
+        m_normalPipelineDescriptorSetID = mgr.m_sets.size() - 1;
+    }
     void App::addSkybox() noexcept
     {
         Texture::CubemapData skyboxInfo
@@ -256,7 +328,7 @@ namespace sge {
             .writeImage(8, &skyboxDescriptorInfo)
             .build(descriptorSet);
 
-        if (Shader glslSkyboxShader("data/Shaders/GLSL/Skybox/skybox.vert", "data/Shaders/GLSL/Skybox/skybox.frag", { "", "" }); glslSkyboxShader.isValid())
+        if (Shader glslSkyboxShader("data/Shaders/GLSL/Skybox/skybox.vert", "data/Shaders/GLSL/Skybox/skybox.frag"); glslSkyboxShader.isValid())
         {
             auto pipelineLayoutSkybox = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
             mgr.m_pipelines.emplace_back(std::to_string(mgr.m_pipelines.size()) + " skybox_GLSL", pipelineLayoutSkybox, nullptr);
@@ -306,12 +378,44 @@ namespace sge {
             if (ImGui::TreeNode("Pipelines")) {
                 for (const auto& pipeline : mgr.m_pipelines) {
                     if (ImGui::TreeNode(pipeline.name.c_str())) {
+                        const auto& shader = pipeline.pipeline->getShader();
                         ImGui::Separator();
-                        ImGui::Text(std::string("Vertex shader path:\n" + pipeline.pipeline->getShader().getVertexShaderPath()).c_str());
-                        ImGui::Text(std::string("Fragment shader path:\n" + pipeline.pipeline->getShader().getFragmentShaderPath()).c_str());
+                        if(ImGui::Button("Recreate pipeline")) 
+                            pipeline.pipeline->recreatePipelineShaders();
                         ImGui::Separator();
-                        ImGui::Text(std::string("Vert defines:\n" + pipeline.pipeline->getShader().getDefines().vertShaderDefines).c_str());
-                        ImGui::Text(std::string("Frag defines:\n" + pipeline.pipeline->getShader().getDefines().fragmentShaderDefines).c_str());
+                        ImGui::Text(std::string("Vertex shader path:\n" + shader.getVertexShaderPath()).c_str());
+                        ImGui::Text(std::string("Fragment shader path:\n" + shader.getFragmentShaderPath()).c_str());
+                        if(shader.isGeometryShaderPresent())
+                            ImGui::Text(std::string("Fragment shader path:\n" + shader.getGeometryShaderPath()).c_str());
+                        ImGui::Separator();
+                        ImGui::Text(std::string("Vert defines:\n" + shader.getDefines().vertShaderDefines).c_str());
+                        ImGui::Text(std::string("Frag defines:\n" + shader.getDefines().fragmentShaderDefines).c_str());
+                        if (shader.isGeometryShaderPresent())
+                            ImGui::Text(std::string("Geom defines:\n" + shader.getDefines().geometryShaderDefines).c_str());
+                        ImGui::TreePop();
+                    }
+                }
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("Use normal-test pipeline")) {
+                m_useNormalPipeline = true;
+                ImGui::SliderFloat("NormalMagnitude:", &m_normalMagnitude, 0.01f, 10.f);
+                ImGui::TreePop();
+            }
+            else
+                m_useNormalPipeline = false;
+
+               
+            ImGui::Text((std::string("Camera position: \n") +
+                std::to_string(m_camera.getCameraPos().x) + " " +
+                std::to_string(m_camera.getCameraPos().y) + " " +
+                std::to_string(m_camera.getCameraPos().z)).c_str());
+            if (ImGui::TreeNode("Meshes")) {
+                for (const auto& mesh : mgr.m_meshes) {
+                    if (ImGui::TreeNode(mesh.getName().c_str())) {
+                        ImGui::Text(std::string("Pipeline ID: " + std::to_string(mesh.getPipelineId())).c_str());
+                        ImGui::Text(std::string("DesctiptorSet ID: " + std::to_string(mesh.getDescriptorSetId())).c_str());
+                        ImGui::Text(std::string("Num of vertices: " + std::to_string(mesh.getVertexCount())).c_str());
                         ImGui::TreePop();
                     }
                 }
@@ -329,7 +433,8 @@ namespace sge {
                 };
                 mgr.m_generalMatrixUBO->writeToBuffer(&ubo);
                 mgr.m_generalMatrixUBO->flush();
-                //Debug debug UBO
+
+                //update debug UBO
                 DebugUBO debugUBO{
                     .outType = static_cast<unsigned int>(currentItem)
                 };
@@ -366,10 +471,7 @@ namespace sge {
         pipelineLayoutInfo.pPushConstantRanges = nullptr;
         auto result = vkCreatePipelineLayout(m_device.device(), &pipelineLayoutInfo, nullptr,
             &pipelineLayout);
-        if (result != VK_SUCCESS) {
-            LOG_ERROR("failed to create pipeline layout\nError: " << getErrorNameFromEnum(result) << " | " << result)
-            assert(false);
-        }
+        VK_CHECK_RESULT(result, "Failed to create pipeline layout");
         return pipelineLayout;
     }
     
@@ -459,70 +561,77 @@ namespace sge {
             auto globalBufferInfo = mgr.m_generalMatrixUBO->descriptorInfo();
             auto bufferInfo = uboBuffer->descriptorInfo();
             auto debuggerBufferInfo = mgr.m_debugUBO->descriptorInfo();
+            std::string defines;
             auto DW = DescriptorWriter(*descriptorLayout, mgr.getDescriptorPool())
                 .writeBuffer(0, &globalBufferInfo)
                 .writeBuffer(1, &bufferInfo)
                 .writeBuffer(100, &debuggerBufferInfo); //debug
-            std::string defines;
-            if (mesh.m_material.m_hasColorMap) {
-                auto baseColorPair = mgr.m_textures.try_emplace(mesh.m_material.m_baseColorPath, mesh.m_material.m_baseColorPath);
-                if (!baseColorPair.first->second.isProcessed())
-                    m_model->createTexture(baseColorPair.first->second);
-                auto textureInfo = baseColorPair.first->second.getDescriptorInfo();
-                DW.writeImage(2, &textureInfo);
-                defines += "#define HAS_COLOR_MAP\n";
-            }
-            if (mesh.m_material.m_hasMetallicRoughnessMap) {
-                auto metallicRoughnessPair = mgr.m_textures.try_emplace(mesh.m_material.m_MetallicRoughnessPath, mesh.m_material.m_MetallicRoughnessPath);
-                if (!metallicRoughnessPair.first->second.isProcessed())
-                    m_model->createTexture(metallicRoughnessPair.first->second);
-                auto textureInfo = metallicRoughnessPair.first->second.getDescriptorInfo();
-                DW.writeImage(3, &textureInfo);
-                defines += "#define HAS_METALLIC_ROUGHNESS_MAP\n";
-            }
-
-            if (mesh.m_material.m_hasNormalMap) {
-                auto normalPair = mgr.m_textures.try_emplace(mesh.m_material.m_NormalPath, mesh.m_material.m_NormalPath);
-                if (!normalPair.first->second.isProcessed())
-                    m_model->createTexture(normalPair.first->second);
-                auto textureInfo = normalPair.first->second.getDescriptorInfo();
-                DW.writeImage(4, &textureInfo);
-                defines += "#define HAS_NORMAL_MAP\n";
-            }
-
-            if (mesh.m_material.m_hasEmissiveMap) {
-                auto emissivePair = mgr.m_textures.try_emplace(mesh.m_material.m_EmissivePath, mesh.m_material.m_EmissivePath);
-                if (!emissivePair.first->second.isProcessed())
-                    m_model->createTexture(emissivePair.first->second);
-                auto textureInfo = emissivePair.first->second.getDescriptorInfo();
-                DW.writeImage(5, &textureInfo);
-                defines += "#define HAS_EMISSIVE_MAP\n";
-            }
-
             {
-                auto skyboxPair = mgr.m_textures.find("skybox");
-                if (skyboxPair == mgr.m_textures.end()) {
-                    LOG_ERROR("Skybox texture is missing!");
-                    assert(false && "Skybox texture is missing!");
-                }
-                auto skyboxDescriptorInfo = skyboxPair->second.getDescriptorInfo();
-                DW.writeImage(8, &skyboxDescriptorInfo);
-                auto skyboxIrradiancePair = mgr.m_textures.find("skybox_irradiance");
-                if (skyboxIrradiancePair == mgr.m_textures.end()) {
-                    LOG_ERROR("skybox_irradiance texture is missing!");
-                    assert(false && "skybox_irradiance texture is missing!");
-                }
-                auto skyboxIrradianceDescriptorInfo = skyboxIrradiancePair->second.getDescriptorInfo();
-                DW.writeImage(9, &skyboxIrradianceDescriptorInfo);
-                auto brdfLUT = mgr.m_textures.find("brdfLUT");
-                if (brdfLUT == mgr.m_textures.end()) {
-                    LOG_ERROR("brdfLUT texture is missing!");
-                    assert(false && "brdfLUT texture is missing!");
-                }
-                auto brdfLUTDescriptorInfo = brdfLUT->second.getDescriptorInfo();
-                DW.writeImage(10, &brdfLUTDescriptorInfo);
+                
+                VkDescriptorImageInfo baseColorDescriptorImageInfo;
+                VkDescriptorImageInfo MetallicRoughnessDescriptorImageInfo;
+                VkDescriptorImageInfo NormalDescriptorImageInfo;
+                VkDescriptorImageInfo EmissiveDescriptorImageInfo;
 
+                if (mesh.m_material.m_hasColorMap) {
+                    auto baseColorPair = mgr.m_textures.try_emplace(mesh.m_material.m_baseColorPath, mesh.m_material.m_baseColorPath);
+                    if (!baseColorPair.first->second.isProcessed())
+                        m_model->createTexture(baseColorPair.first->second);
+                    baseColorDescriptorImageInfo = baseColorPair.first->second.getDescriptorInfo();
+                    DW.writeImage(2, &baseColorDescriptorImageInfo);
+                    defines += "#define HAS_COLOR_MAP\n";
+                }
+                if (mesh.m_material.m_hasMetallicRoughnessMap) {
+                    auto metallicRoughnessPair = mgr.m_textures.try_emplace(mesh.m_material.m_MetallicRoughnessPath, mesh.m_material.m_MetallicRoughnessPath);
+                    if (!metallicRoughnessPair.first->second.isProcessed())
+                        m_model->createTexture(metallicRoughnessPair.first->second);
+                    MetallicRoughnessDescriptorImageInfo = metallicRoughnessPair.first->second.getDescriptorInfo();
+                    DW.writeImage(3, &MetallicRoughnessDescriptorImageInfo);
+                    defines += "#define HAS_METALLIC_ROUGHNESS_MAP\n";
+                }
+                if (mesh.m_material.m_hasNormalMap) {
+                    auto normalPair = mgr.m_textures.try_emplace(mesh.m_material.m_NormalPath, mesh.m_material.m_NormalPath);
+                    if (!normalPair.first->second.isProcessed())
+                        m_model->createTexture(normalPair.first->second);
+                    NormalDescriptorImageInfo = normalPair.first->second.getDescriptorInfo();
+                    DW.writeImage(4, &NormalDescriptorImageInfo);
+                    defines += "#define HAS_NORMAL_MAP\n";
+                }
+                if (mesh.m_material.m_hasEmissiveMap) {
+                    auto emissivePair = mgr.m_textures.try_emplace(mesh.m_material.m_EmissivePath, mesh.m_material.m_EmissivePath);
+                    if (!emissivePair.first->second.isProcessed())
+                        m_model->createTexture(emissivePair.first->second);
+                    EmissiveDescriptorImageInfo = emissivePair.first->second.getDescriptorInfo();
+                    DW.writeImage(5, &EmissiveDescriptorImageInfo);
+                    defines += "#define HAS_EMISSIVE_MAP\n";
+                }
+
+                {
+                    auto skyboxPair = mgr.m_textures.find("skybox");
+                    if (skyboxPair == mgr.m_textures.end()) {
+                        LOG_ERROR("Skybox texture is missing!");
+                        assert(false && "Skybox texture is missing!");
+                    }
+                    auto skyboxDescriptorInfo = skyboxPair->second.getDescriptorInfo();
+                    DW.writeImage(8, &skyboxDescriptorInfo);
+                    auto skyboxIrradiancePair = mgr.m_textures.find("skybox_irradiance");
+                    if (skyboxIrradiancePair == mgr.m_textures.end()) {
+                        LOG_ERROR("skybox_irradiance texture is missing!");
+                        assert(false && "skybox_irradiance texture is missing!");
+                    }
+                    auto skyboxIrradianceDescriptorInfo = skyboxIrradiancePair->second.getDescriptorInfo();
+                    DW.writeImage(9, &skyboxIrradianceDescriptorInfo);
+                    auto brdfLUT = mgr.m_textures.find("brdfLUT");
+                    if (brdfLUT == mgr.m_textures.end()) {
+                        LOG_ERROR("brdfLUT texture is missing!");
+                        assert(false && "brdfLUT texture is missing!");
+                    }
+                    auto brdfLUTDescriptorInfo = brdfLUT->second.getDescriptorInfo();
+                    DW.writeImage(10, &brdfLUTDescriptorInfo);
+                }
             }
+            VkDescriptorSet descriptorSet;
+            DW.build(descriptorSet);
             switch (mesh.m_materialType)
             {
             case Mesh::MaterialType::Phong:
@@ -532,9 +641,6 @@ namespace sge {
                 defines += "#define PBR\n";
                 break;
             }
-
-            VkDescriptorSet descriptorSet;
-            DW.build(descriptorSet);
             mesh.m_pipelineId = -1;
             
             for(int i = 0; i < mgr.m_pipelines.size(); ++i)
@@ -548,7 +654,7 @@ namespace sge {
                 switch (mesh.m_materialType)
                 {
                 case Mesh::MaterialType::Phong:
-                    if (Shader glslPhongShader("data/Shaders/GLSL/Phong/phong.vert", "data/Shaders/GLSL/Phong/phong.frag", { "", defines}); glslPhongShader.isValid())
+                    if (Shader glslPhongShader("data/Shaders/GLSL/Phong/phong.vert", "data/Shaders/GLSL/Phong/phong.frag", "", {"", defines}); glslPhongShader.isValid())
                     {
                         auto pipelineLayoutGLSLPhong = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
                         mgr.m_pipelines.emplace_back(std::to_string(mgr.m_pipelines.size()) + " Phong_GLSL", pipelineLayoutGLSLPhong, nullptr);
@@ -558,12 +664,14 @@ namespace sge {
                     }
                     break;
                 case Mesh::MaterialType::PBR:
-                    if (Shader glslPBRShader("data/Shaders/GLSL/PBR/PBR.vert", "data/Shaders/GLSL/PBR/PBR.frag", { "", defines}); glslPBRShader.isValid())
+                    if (Shader glslPBRShader("data/Shaders/GLSL/PBR/PBR.vert", "data/Shaders/GLSL/PBR/PBR.frag", "", {"", defines}); glslPBRShader.isValid())
                     {
                         auto pipelineLayoutGLSLPBR = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
                         mgr.m_pipelines.emplace_back(std::to_string(mgr.m_pipelines.size()) + " PBR_GLSL", pipelineLayoutGLSLPBR, nullptr);
                         mesh.m_pipelineId = mgr.m_pipelines.size() - 1;
-                        createPipeline(pipelineLayoutGLSLPBR, mgr.m_pipelines.back().pipeline, std::move(glslPBRShader));
+                        FixedPipelineStates states{};
+                        states.cullingMode = CullingMode::NONE;
+                        createPipeline(pipelineLayoutGLSLPBR, mgr.m_pipelines.back().pipeline, std::move(glslPBRShader), std::move(states));
                         LOG_MSG("Pipeline name: " << mgr.m_pipelines[mesh.m_pipelineId].name << ": " << mgr.m_pipelines[mesh.m_pipelineId].pipeline->getShader().getFragmentShaderPath());
                     }
 #if 0

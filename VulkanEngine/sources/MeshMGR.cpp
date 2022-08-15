@@ -12,6 +12,7 @@ namespace sge {
 		m_sets.clear();
 		m_generalMatrixUBO = nullptr;
 		m_debugUBO = nullptr;
+		m_normalTestUBO = nullptr;
 		m_globalPool = {nullptr};
 		m_UIPool = {nullptr};
 	}
