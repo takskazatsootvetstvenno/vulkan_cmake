@@ -1,4 +1,3 @@
-#pragma once
 #include "Shader.h"
 #include "Logger.h"
 #include <fstream>

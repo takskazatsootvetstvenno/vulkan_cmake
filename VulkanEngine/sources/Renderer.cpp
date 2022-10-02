@@ -59,7 +59,7 @@ namespace sge {
             SetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(
                 m_device.getInstance(),
                 "vkSetDebugUtilsObjectNameEXT");
-            for (int i = 0; i < m_commandBuffers.size(); ++i)
+            for (size_t i = 0; i < m_commandBuffers.size(); ++i)
             {
                 std::string temp = "CB_" + std::to_string(i);
                 VkDebugUtilsObjectNameInfoEXT cmd_buf = {

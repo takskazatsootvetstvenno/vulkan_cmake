@@ -28,7 +28,7 @@ namespace sge {
             m_swapChain = nullptr;
         }
 
-        for (int i = 0; i < m_depthImages.size(); ++i) {
+        for (size_t i = 0; i < m_depthImages.size(); ++i) {
             vkDestroyImageView(m_device.device(), m_depthImageViews[i], nullptr);
             vkDestroyImage(m_device.device(), m_depthImages[i], nullptr);
             vkFreeMemory(m_device.device(), m_depthImageMemorys[i], nullptr);
@@ -197,7 +197,7 @@ namespace sge {
         m_depthImageMemorys.resize(m_swapChainImages.size());
         m_depthImageViews.resize(m_swapChainImages.size());
 
-        for (int i = 0; i < m_depthImages.size(); i++) {
+        for (size_t i = 0; i < m_depthImages.size(); ++i) {
             VkImageCreateInfo imageInfo{};
             imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
             imageInfo.imageType = VK_IMAGE_TYPE_2D;

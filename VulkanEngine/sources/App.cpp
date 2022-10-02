@@ -201,7 +201,7 @@ namespace sge {
             }
         );
         m_eventDispatcher.add_event_listener <EventWindowResize>(
-            [&](EventWindowResize& event)
+            [&](EventWindowResize& )
             {
                 m_camera.setPerspectiveProjection(glm::radians(m_camera.getZoom()), static_cast<float>(m_window.getExtent().width) / m_window.getExtent().height, 0.1f, 100.f);
             }
@@ -383,15 +383,15 @@ namespace sge {
                         if(ImGui::Button("Recreate pipeline")) 
                             pipeline.pipeline->recreatePipelineShaders();
                         ImGui::Separator();
-                        ImGui::Text(std::string("Vertex shader path:\n" + shader.getVertexShaderPath()).c_str());
-                        ImGui::Text(std::string("Fragment shader path:\n" + shader.getFragmentShaderPath()).c_str());
+                        ImGui::Text("%s", std::string("Vertex shader path:\n" + shader.getVertexShaderPath()).c_str());
+                        ImGui::Text("%s", std::string("Fragment shader path:\n" + shader.getFragmentShaderPath()).c_str());
                         if(shader.isGeometryShaderPresent())
-                            ImGui::Text(std::string("Fragment shader path:\n" + shader.getGeometryShaderPath()).c_str());
+                            ImGui::Text("%s", std::string("Fragment shader path:\n" + shader.getGeometryShaderPath()).c_str());
                         ImGui::Separator();
-                        ImGui::Text(std::string("Vert defines:\n" + shader.getDefines().vertShaderDefines).c_str());
-                        ImGui::Text(std::string("Frag defines:\n" + shader.getDefines().fragmentShaderDefines).c_str());
+                        ImGui::Text("%s", std::string("Vert defines:\n" + shader.getDefines().vertShaderDefines).c_str());
+                        ImGui::Text("%s", std::string("Frag defines:\n" + shader.getDefines().fragmentShaderDefines).c_str());
                         if (shader.isGeometryShaderPresent())
-                            ImGui::Text(std::string("Geom defines:\n" + shader.getDefines().geometryShaderDefines).c_str());
+                            ImGui::Text("%s", std::string("Geom defines:\n" + shader.getDefines().geometryShaderDefines).c_str());
                         ImGui::TreePop();
                     }
                 }
@@ -406,16 +406,16 @@ namespace sge {
                 m_useNormalPipeline = false;
 
                
-            ImGui::Text((std::string("Camera position: \n") +
+            ImGui::Text("%s", (std::string("Camera position: \n") +
                 std::to_string(m_camera.getCameraPos().x) + " " +
                 std::to_string(m_camera.getCameraPos().y) + " " +
                 std::to_string(m_camera.getCameraPos().z)).c_str());
             if (ImGui::TreeNode("Meshes")) {
                 for (const auto& mesh : mgr.m_meshes) {
                     if (ImGui::TreeNode(mesh.getName().c_str())) {
-                        ImGui::Text(std::string("Pipeline ID: " + std::to_string(mesh.getPipelineId())).c_str());
-                        ImGui::Text(std::string("DesctiptorSet ID: " + std::to_string(mesh.getDescriptorSetId())).c_str());
-                        ImGui::Text(std::string("Num of vertices: " + std::to_string(mesh.getVertexCount())).c_str());
+                        ImGui::Text("%s", std::string("Pipeline ID: " + std::to_string(mesh.getPipelineId())).c_str());
+                        ImGui::Text("%s", std::string("DesctiptorSet ID: " + std::to_string(mesh.getDescriptorSetId())).c_str());
+                        ImGui::Text("%s", std::string("Num of vertices: " + std::to_string(mesh.getVertexCount())).c_str());
                         ImGui::TreePop();
                     }
                 }

@@ -49,7 +49,7 @@ add_custom_command(TARGET ${EDITOR_PROJECT_NAME}
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/HLSL/PBR/PBR_vert.hlsl ${PROJECT_BINARY_DIR}/Editor/data/Shaders/HLSL/PBR/PBR_vert.hlsl
 
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/HLSL/Skybox/skybox_frag.hlsl ${PROJECT_BINARY_DIR}/Editor/data/Shaders/HLSL/Skybox/skybox_frag.hlsl
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/HLSL/Skybox/Skybox_vert.hlsl ${PROJECT_BINARY_DIR}/Editor/data/Shaders/HLSL/Skybox/Skybox_vert.hlsl
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/HLSL/Skybox/skybox_vert.hlsl ${PROJECT_BINARY_DIR}/Editor/data/Shaders/HLSL/Skybox/skybox_vert.hlsl
 
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/data/Skybox ${PROJECT_BINARY_DIR}/Editor/data/Skybox
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/brdfLUT.png ${PROJECT_BINARY_DIR}/Editor/data/brdfLUT.png
