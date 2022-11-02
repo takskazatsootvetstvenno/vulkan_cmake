@@ -45,6 +45,7 @@ const float gamma = 2.2f;
 layout(set = 0, binding = 8) uniform samplerCube skybox;
 layout(set = 0, binding = 9) uniform samplerCube irradiance;
 layout(set = 0, binding = 10) uniform sampler2D brdfLUT;
+
 vec3 fDiffuse(const vec3 surfaceColor)
 {
 	return surfaceColor/M_PI;
@@ -81,24 +82,6 @@ vec3 getNormal()
 	vec3 normalMap = texture(NormalSampler, texCoords_in).xyz * 2.0 - 1.0;
 #endif
 
-	const vec3 N = normalize(norm_in);
-	const vec3 V = normalize(worldPos_in);
-	vec3 dp1 = dFdx(-V);
-	vec3 dp2 = dFdy(-V);
-	vec2 duv1 = dFdx(texCoords_in);
-	vec2 duv2 = dFdy(texCoords_in);
-
-  // solve the linear system
-	vec3 dp2perp = cross(dp2, N);
-	vec3 dp1perp = cross(N, dp1);
-	vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
-	vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
-
-  // construct a scale-invariant frame 
-  float invmax = 1.0 / sqrt(max(dot(T,T), dot(B,B)));
-  mat3 TBN = mat3(T * invmax, B * invmax, N);  
-    
-	/*
 	vec3 q1 = dFdx(worldPos_in);
 	vec3 q2 = dFdy(worldPos_in);
 	vec2 st1 = dFdx(texCoords_in);
@@ -108,7 +91,7 @@ vec3 getNormal()
 	vec3 T = normalize(q1 * st2.t - q2 * st1.t);
 	vec3 B = -normalize(cross(N, T));
 	mat3 TBN = mat3(T, B, N);
-	*/
+	
 #ifdef HAS_NORMAL_MAP	
 	vec3 n = normalize(TBN * normalMap);
 #else
@@ -120,7 +103,7 @@ vec3 getNormal()
 vec4 SRGBtoLINEAR(vec4 srgbIn)
 {
     vec3 bLess = step(vec3(0.04045),srgbIn.xyz);
-    vec3 linOut = mix( srgbIn.xyz/vec3(12.92), pow((srgbIn.xyz+vec3(0.055))/vec3(1.055),vec3(2.4)), bLess );
+    vec3 linOut = mix( srgbIn.xyz/vec3(12.92), pow((srgbIn.xyz+vec3(0.055))/vec3(1.055), vec3(2.4)), bLess );
 	return vec4(linOut,srgbIn.w);;
 }
 
@@ -129,10 +112,14 @@ vec3 getIBLContribution(vec3 diffuseColor, vec3 specularColor, vec3 n, vec3 refl
 
 	vec3 brdf = texture(brdfLUT, vec2(NdotV, 1.0 - roughness)).rgb;
 
-	vec3 specular = SRGBtoLINEAR(texture(skybox, reflection)).rgb;
+	vec3 specular = SRGBtoLINEAR(texture(skybox, -reflection)).rgb;
 
 	diffuse *= diffuseColor;
 	specular *= (specularColor * brdf.x + brdf.y);
+
+	diffuse *= 0.3;
+	specular *= 0.3;
+
 	return diffuse+specular;
 }
 
@@ -151,7 +138,7 @@ void main() {
 	const float VdotH = clamp(dot(V, H), 0.0, 1.0);
 	
 #ifdef HAS_COLOR_MAP
-	vec4 basecolor = localUBO.baseColor * texture(baseColorSampler, texCoords_in);
+	vec4 basecolor = localUBO.baseColor * SRGBtoLINEAR(texture(baseColorSampler, texCoords_in));
 #else
 	vec4 basecolor = localUBO.baseColor;
 #endif

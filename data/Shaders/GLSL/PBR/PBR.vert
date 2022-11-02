@@ -27,10 +27,14 @@ layout(set = 0, binding = 1) uniform MeshUbo
 } localUBO;
 
 void main(){
-	norm_out = normalize(localUBO.normalMatrix * normal_in); //(M^-1)^T
-	//norm_out = normalize(transpose(inverse(mat3(localUBO.modelMatrix))) * normal_in);
+	//norm_out = normalize(localUBO.normalMatrix * normal_in); //(M^-1)^T
+	vec4 locPos = localUBO.modelMatrix * vec4(position_in, 1.0);
+	norm_out = normalize(transpose(inverse(mat3(localUBO.modelMatrix))) * normal_in);
+
 	cameraPosition_out = globalUBO.cameraPosition;
-	worldPos_out = vec3(localUBO.modelMatrix * vec4(position_in, 1.0));
+	//locPos.y = -locPos.y;
+	worldPos_out = locPos.xyz / locPos.w;
 	texCoord_out = texCoord_in;
-	gl_Position = globalUBO.projectionMatrix * globalUBO.viewMatrix * localUBO.modelMatrix *vec4(position_in, 1.0);
+
+	gl_Position = globalUBO.projectionMatrix * globalUBO.viewMatrix * vec4(worldPos_out, 1.0);
 }

@@ -6,6 +6,8 @@
 #include <assimp/scene.h>
 #include <climits>
 #include <memory>
+#include <cstdint>
+#include <fstream>
 using namespace std;
 
 static_assert(CHAR_BIT == 8 && sizeof(int) == 4, "char must be 8 bits, int must be 4 bytes!");
@@ -31,9 +33,9 @@ void processMesh(aiMesh* aiMesh, const aiScene* scene, std::string_view basePath
             mesh.m_pos[i].m_UV = { aiMesh->mTextureCoords[0][i].x, aiMesh->mTextureCoords[0][i].y };
         }
     }
-    for (unsigned int i = 0; i < aiMesh->mNumFaces; i++) {
+    for (unsigned int i = 0; i < aiMesh->mNumFaces; ++i) {
         aiFace face = aiMesh->mFaces[i];
-        for (unsigned int j = 0; j < face.mNumIndices; j++)  
+        for (unsigned int j = 0; j < face.mNumIndices; ++j)  
             mesh.m_ind.push_back(face.mIndices[j]); 
     }
 
@@ -112,19 +114,76 @@ void processMesh(aiMesh* aiMesh, const aiScene* scene, std::string_view basePath
 
 void processNode(aiNode* node, const aiScene* scene,  const std::string_view basePath, std::vector<sge::Mesh>& meshes, glm::mat4 const& parentMat = glm::mat4(1.0f))
 {
-    for (unsigned int i = 0; i < node->mNumMeshes; i++) {
+    for (unsigned int i = 0; i < node->mNumMeshes; ++i) {
         aiMesh* aiMesh = scene->mMeshes[node->mMeshes[i]];
         processMesh(aiMesh, scene, basePath, meshes, parentMat * convertMatrix(node->mTransformation));
     }
-    for (unsigned int i = 0; i < node->mNumChildren; i++) {
+    for (unsigned int i = 0; i < node->mNumChildren; ++i) 
         processNode(node->mChildren[i], scene, basePath, meshes, parentMat * convertMatrix(node->mTransformation));
-    }
+}
+
+struct MeshHeader {
+    static const uint32_t MeshWithTangent = 1 << 0;
+    uint8_t version = 40; //40
+    uint8_t numWeights; //0
+    uint8_t numBones; //0
+    uint8_t numAnimations; //0
+    uint16_t numPolygons;
+    uint16_t numVertices;
+    float boundingBox[6]; //0
+    uint8_t flags; //0
+    uint8_t reserved1; //0
+    uint16_t reserved2; //0
+    uint32_t reserved3; //0
+    float StartAnimation;//0
+    float EndAnimation;//0
+    float DeltaTime;//0
+};
+
+void export_to_Andrew_format(const sge::Mesh& mesh)
+{
+    std::ofstream file("dom.lev", ios::binary);
+    std::vector<uint16_t> indices(mesh.getIndexCount());
+    /*for (size_t i = 0; i < mesh.m_ind.size(); ++i)
+        indices[i] = mesh.m_ind[i];*/
+    std::copy(mesh.m_ind.begin(), mesh.m_ind.end(), indices.begin());
+    MeshHeader meshHeader{};
+        meshHeader.numVertices = mesh.getVertexCount();
+        meshHeader.numPolygons = mesh.getIndexCount() / 3;
+        std::vector<uint8_t> data(
+            sizeof(MeshHeader) +
+            1 +
+            sizeof(sge::Vertex) * mesh.getVertexCount() +
+            sizeof(uint16_t) * mesh.getIndexCount());
+    size_t offset = 0;
+
+    memcpy(
+        data.data(),
+        &meshHeader,
+        sizeof(MeshHeader)
+    );
+    offset += sizeof(MeshHeader) + 1;
+    memcpy(
+        data.data() + offset,
+        mesh.m_pos.data(),
+        mesh.m_pos.size() * sizeof(sge::Vertex)
+    );
+    offset += mesh.m_pos.size() * sizeof(sge::Vertex);
+    memcpy(data.data() + offset,
+        indices.data(),
+        indices.size() * sizeof(uint16_t)
+    );
+    file.write((const char*)data.data(), data.size());
 }
 
 void load_model(sge::App& app, const std::string_view path, const glm::mat4 rootMatrix = glm::mat4{1.f})
 {
     Assimp::Importer importer;
-    auto scene = importer.ReadFile(path.data(), aiProcess_Triangulate | aiProcess_GenUVCoords | aiProcess_FlipUVs | aiProcess_GenNormals);
+    unsigned int flags = aiProcess_FlipUVs | aiProcess_Triangulate;
+    // aiProcess_FlipWindingOrder | aiProcess_Triangulate |
+    //                                              aiProcess_GenUVCoords | aiProcess_GenUVCoords | aiProcess_FlipUVs |
+    //                                              aiProcess_PreTransformVertices | aiProcess_GenSmoothNormals;
+    auto scene = importer.ReadFile(path.data(), flags);
     if (scene == nullptr ||
         scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
         scene->mRootNode == nullptr)
@@ -135,29 +194,43 @@ void load_model(sge::App& app, const std::string_view path, const glm::mat4 root
     }
   
     std::vector<sge::Mesh> meshes;
-    const auto m = rootMatrix * (glm::rotate(glm::mat4{ 1.f }, glm::radians(180.f), glm::vec3{ 1.f, 0.f, 0.f }));
-    //auto& m = rootMatrix;
+   // const auto m = rootMatrix * (glm::rotate(glm::mat4{ 1.f }, glm::radians(180.f), glm::vec3{ 1.f, 0.f, 0.f }));
+    auto& m = rootMatrix;
+
     processNode(scene->mRootNode, scene, path, meshes, m);
+    //export_to_Andrew_format(meshes[0]);
     app.loadModels(std::move(meshes));
 }
 
 int main() {
-    sge::App my_app({800, 600 }, "Vulkan engine");
-    //load_model(my_app, "C:/Users/Denis/Documents/work_build/rendering-engine/cmake-build/install/bin/transparency.gltf");
-    //load_model(my_app, "Models/METAL_SPHERES/METAL_SPHERES.gltf");
-    //load_model(my_app, "D:/temp/test_obj/map.obj");
-    load_model(my_app, "Models/WaterBottle/WaterBottle.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
-    //load_model(my_app, "Models/pbr_test_sphere/scene.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(1.f, 1.f, 1.f)));
-    //load_model(my_app, "C:/Users/Denis/source/repos/vulkan_gltf_sasha_wil/data/models/Box/glTF-Embedded/Box.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
-    //load_model(my_app, "C:/Users/Denis/Downloads/glTF-Sample-Models-master (1)/glTF-Sample-Models-master/2.0/BoxTextured/glTF/BoxTextured.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
-    
-    //load_model(my_app, "C:/Users/Denis/Downloads/normal_map_test_-_manhole/scene.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
-    /*load_model(my_app,
-        "Models/WaterBottle/WaterBottle.gltf",
-        glm::translate(glm::mat4{ 1.f },
-        glm::vec3{ -1.f,0.f,0.f })
-    );
-    */
-    my_app.run();
+    {
+#ifdef _DEBUG
+#ifdef _MSC_VER
+        _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+#endif // _DEBUG
+
+        sge::App my_app({ 1280, 720 }, "Vulkan engine");
+        //load_model(my_app, "C:/Users/Denis/Documents/work_build/rendering-engine/cmake-build/install/bin/transparency.gltf");
+        //load_model(my_app, "Models/METAL_SPHERES/METAL_SPHERES.gltf");
+        //load_model(my_app, "D:/temp/test_obj/map.obj");
+        load_model(my_app, "Models/WaterBottle/WaterBottle.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
+        //load_model(my_app, "Models/Sphere/sphere.glb");
+        //load_model(my_app, "D:/temp/blender_files/NORMAL_MAPPING/cubes/scene.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(1.f, 1.f, 1.f)));
+        //load_model(my_app, "Models/textured_cube/scene.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(0.01f, 0.01f, 0.01f)));
+        //load_model(my_app, "C:/Users/Denis/Downloads/Exquisite Amberis-Jaban.glb", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
+        //load_model(my_app, "Models/pbr_test_sphere/scene.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(1.f, 1.f, 1.f)));
+        //load_model(my_app, "C:/Users/Denis/source/repos/vulkan_gltf_sasha_wil/data/models/Box/glTF-Embedded/Box.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
+        //load_model(my_app, "C:/Users/Denis/Downloads/glTF-Sample-Models-master (1)/glTF-Sample-Models-master/2.0/BoxTextured/glTF/BoxTextured.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
+
+        //load_model(my_app, "C:/Users/Denis/Downloads/normal_map_test_-_manhole/scene.gltf", glm::scale(glm::mat4{ 1.f }, glm::vec3(10.f, 10.f, 10.f)));
+        /*load_model(my_app,
+            "Models/WaterBottle/WaterBottle.gltf",
+            glm::translate(glm::mat4{ 1.f },
+            glm::vec3{ -1.f,0.f,0.f })
+        );
+        */
+        my_app.run();
+    }
     return 0;
 }

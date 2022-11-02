@@ -20,6 +20,6 @@ void main(){
 	new_view[3] = vec4(0.f, 0.f, 0.f, 0.f);
 	*/
 	vec4 pos = globalUBO.projectionMatrix * vec4(mat3(globalUBO.viewMatrix) * pos_in.xyz, 1.f);
-	texCoords_out = position_in;
+	texCoords_out = -position_in;
 	gl_Position = pos.xyww;
 }

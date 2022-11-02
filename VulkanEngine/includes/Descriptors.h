@@ -1,100 +1,94 @@
 #pragma once
 
 #include "Device.h"
+
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
 namespace sge {
 
-    class DescriptorSetLayout {
-    public:
-        class Builder {
-        public:
-            Builder(Device& device) : m_device{ device } {}
+class DescriptorSetLayout {
+ public:
+    class Builder {
+     public:
+        Builder(Device& device) : m_device{device} {}
 
-            Builder& addBinding(
-                uint32_t binding,
-                VkDescriptorType descriptorType,
-                VkShaderStageFlags stageFlags,
-                uint32_t count = 1);
-            std::unique_ptr<DescriptorSetLayout> build() const;
+        Builder& addBinding(uint32_t binding, VkDescriptorType descriptorType, VkShaderStageFlags stageFlags,
+                            uint32_t count = 1);
+        std::unique_ptr<DescriptorSetLayout> build() const;
 
-        private:
-            Device& m_device;
-            std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> m_bindings{};
-        };
-
-        DescriptorSetLayout(
-            Device& device, std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings);
-        ~DescriptorSetLayout();
-        DescriptorSetLayout(const DescriptorSetLayout& other);
-        DescriptorSetLayout& operator=(const DescriptorSetLayout&) = delete;
-
-        VkDescriptorSetLayout getDescriptorSetLayout() const { return m_descriptorSetLayout; }
-
-    private:
+     private:
         Device& m_device;
-        VkDescriptorSetLayout m_descriptorSetLayout;
-        std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> m_bindings;
-
-        friend class DescriptorWriter;
+        std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> m_bindings{};
     };
 
-    class DescriptorPool {
-    public:
-        class Builder {
-        public:
-            Builder(Device& device) : m_device{ device } {}
+    DescriptorSetLayout(Device& device, std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings);
+    ~DescriptorSetLayout();
+    DescriptorSetLayout(const DescriptorSetLayout& other);
+    DescriptorSetLayout& operator=(const DescriptorSetLayout&) = delete;
 
-            Builder& addPoolSize(VkDescriptorType descriptorType, uint32_t count);
-            Builder& setPoolFlags(VkDescriptorPoolCreateFlags flags);
-            Builder& setMaxSets(uint32_t count);
-            std::unique_ptr<DescriptorPool> build() const;
+    VkDescriptorSetLayout getDescriptorSetLayout() const { return m_descriptorSetLayout; }
 
-        private:
-            Device& m_device;
-            std::vector<VkDescriptorPoolSize> m_poolSizes{};
-            uint32_t m_maxSets = 1000;  
-            VkDescriptorPoolCreateFlags m_poolFlags = 0;
-        };
+ private:
+    Device& m_device;
+    VkDescriptorSetLayout m_descriptorSetLayout;
+    std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> m_bindings;
 
-        DescriptorPool(
-            Device& Device,
-            uint32_t maxSets,
-            VkDescriptorPoolCreateFlags poolFlags, 
-            const std::vector<VkDescriptorPoolSize>& poolSizes);
-        ~DescriptorPool();
-        DescriptorPool(const DescriptorPool&) = delete;
-        DescriptorPool& operator=(const DescriptorPool&) = delete;
+    friend class DescriptorWriter;
+};
 
-        bool allocateDescriptor(
-            const VkDescriptorSetLayout descriptorSetLayout, VkDescriptorSet& descriptor) const;
+class DescriptorPool {
+ public:
+    class Builder {
+     public:
+        Builder(Device& device) : m_device{device} {}
 
-        void freeDescriptors(std::vector<VkDescriptorSet>& descriptors) const;
+        Builder& addPoolSize(VkDescriptorType descriptorType, uint32_t count);
+        Builder& setPoolFlags(VkDescriptorPoolCreateFlags flags);
+        Builder& setMaxSets(uint32_t count);
+        std::unique_ptr<DescriptorPool> build() const;
 
-        void resetPool();
-        const VkDescriptorPool getDescriptorPool() { return m_descriptorPool; }
-    private:
+     private:
         Device& m_device;
-        VkDescriptorPool m_descriptorPool;
-
-        friend class DescriptorWriter;
+        std::vector<VkDescriptorPoolSize> m_poolSizes{};
+        uint32_t m_maxSets = 1000;
+        VkDescriptorPoolCreateFlags m_poolFlags = 0;
     };
 
-    class DescriptorWriter {
-    public:
-        DescriptorWriter(DescriptorSetLayout& setLayout, DescriptorPool& pool);
+    DescriptorPool(Device& Device, uint32_t maxSets, VkDescriptorPoolCreateFlags poolFlags,
+                   const std::vector<VkDescriptorPoolSize>& poolSizes);
+    ~DescriptorPool();
+    DescriptorPool(const DescriptorPool&) = delete;
+    DescriptorPool& operator=(const DescriptorPool&) = delete;
 
-        DescriptorWriter& writeBuffer(uint32_t binding, VkDescriptorBufferInfo* bufferInfo);
-        DescriptorWriter& writeImage(uint32_t binding, VkDescriptorImageInfo* imageInfo);
+    bool allocateDescriptor(const VkDescriptorSetLayout descriptorSetLayout, VkDescriptorSet& descriptor) const;
 
-        bool build(VkDescriptorSet& set);
-        void overwrite(VkDescriptorSet& set);
+    void freeDescriptors(std::vector<VkDescriptorSet>& descriptors) const;
 
-    private:
-        DescriptorSetLayout& m_setLayout;
-        DescriptorPool& m_pool;
-        std::vector<VkWriteDescriptorSet> m_writes;
-    };
-}
+    void resetPool();
+    const VkDescriptorPool getDescriptorPool() { return m_descriptorPool; }
+
+ private:
+    Device& m_device;
+    VkDescriptorPool m_descriptorPool;
+
+    friend class DescriptorWriter;
+};
+
+class DescriptorWriter {
+ public:
+    DescriptorWriter(DescriptorSetLayout& setLayout, DescriptorPool& pool);
+
+    DescriptorWriter& writeBuffer(uint32_t binding, VkDescriptorBufferInfo* bufferInfo);
+    DescriptorWriter& writeImage(uint32_t binding, VkDescriptorImageInfo* imageInfo);
+
+    bool build(VkDescriptorSet& set);
+    void overwrite(VkDescriptorSet& set);
+
+ private:
+    DescriptorSetLayout& m_setLayout;
+    DescriptorPool& m_pool;
+    std::vector<VkWriteDescriptorSet> m_writes;
+};
+}  // namespace sge

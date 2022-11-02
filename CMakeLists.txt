@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 
 SET(PROJECT_NAME VulkanEngine)
 
+set(default_build_type "Release")
+
 get_filename_component(GENERAL_FOLDER ../ ABSOLUTE)
 set(CMAKE_INSTALL_PREFIX "${GENERAL_FOLDER}" CACHE PATH "${GENERAL_FOLDER}" FORCE)
 
