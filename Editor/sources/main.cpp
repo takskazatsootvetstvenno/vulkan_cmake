@@ -31,8 +31,6 @@ void processMesh(aiMesh* aiMesh, const aiScene* scene, std::string_view basePath
     for (unsigned int i = 0; i < aiMesh->mNumVertices; ++i) {
         glm::vec3 pos = {aiMesh->mVertices[i].x, aiMesh->mVertices[i].y, aiMesh->mVertices[i].z};
         mesh.m_pos[i].m_position = pos;
-        mesh.m_boundingBox.min = glm::min(mesh.m_boundingBox.min, pos);
-        mesh.m_boundingBox.max = glm::max(mesh.m_boundingBox.max, pos);
         mesh.m_pos[i].m_normal = {aiMesh->mNormals[i].x, aiMesh->mNormals[i].y, aiMesh->mNormals[i].z};
         if (aiMesh->mTextureCoords[0] != nullptr) {
             mesh.m_pos[i].m_UV = {aiMesh->mTextureCoords[0][i].x, aiMesh->mTextureCoords[0][i].y};
@@ -105,6 +103,16 @@ void processMesh(aiMesh* aiMesh, const aiScene* scene, std::string_view basePath
             LOG_ERROR("Model loading: Unsupported shading model!");
             break;
     }
+
+    mesh.m_boundingBox.min = {aiMesh->mAABB.mMin.x, aiMesh->mAABB.mMin.y, aiMesh->mAABB.mMin.z};
+    mesh.m_boundingBox.max = {aiMesh->mAABB.mMax.x, aiMesh->mAABB.mMax.y, aiMesh->mAABB.mMax.z};
+
+    glm::vec3 result_min = posMat * glm::vec4(mesh.m_boundingBox.min, 1.f);
+    glm::vec3 result_max = posMat * glm::vec4(mesh.m_boundingBox.max, 1.f);
+    glm::vec3 v = glm::abs(result_max - result_min);
+    const auto max = std::max(std::max(v.x, v.y), v.z);
+    const float d = 1.f / (max / 10.f);
+    posMat = glm::scale(posMat, glm::vec3(d));
     mesh.setModelMatrix(std::move(posMat));
     meshes.push_back(std::move(mesh));
 }
@@ -119,51 +127,11 @@ void processNode(aiNode* node, const aiScene* scene, const std::string_view base
         processNode(node->mChildren[i], scene, basePath, meshes, parentMat * convertMatrix(node->mTransformation));
 }
 
-struct MeshHeader {
-    static const uint32_t MeshWithTangent = 1 << 0;
-    uint8_t version = 40;   // 40
-    uint8_t numWeights;     // 0
-    uint8_t numBones;       // 0
-    uint8_t numAnimations;  // 0
-    uint16_t numPolygons;
-    uint16_t numVertices;
-    float boundingBox[6];  // 0
-    uint8_t flags;         // 0
-    uint8_t reserved1;     // 0
-    uint16_t reserved2;    // 0
-    uint32_t reserved3;    // 0
-    float StartAnimation;  // 0
-    float EndAnimation;    // 0
-    float DeltaTime;       // 0
-};
-
-void export_to_Andrew_format(const sge::Mesh& mesh) {
-    std::ofstream file("dom.lev", ios::binary);
-    std::vector<uint16_t> indices(mesh.getIndexCount());
-    /*for (size_t i = 0; i < mesh.m_ind.size(); ++i)
-        indices[i] = mesh.m_ind[i];*/
-    std::copy(mesh.m_ind.begin(), mesh.m_ind.end(), indices.begin());
-    MeshHeader meshHeader{};
-    meshHeader.numVertices = mesh.getVertexCount();
-    meshHeader.numPolygons = mesh.getIndexCount() / 3;
-    std::vector<uint8_t> data(sizeof(MeshHeader) + 1 + sizeof(sge::Vertex) * mesh.getVertexCount() +
-                              sizeof(uint16_t) * mesh.getIndexCount());
-    size_t offset = 0;
-
-    memcpy(data.data(), &meshHeader, sizeof(MeshHeader));
-    offset += sizeof(MeshHeader) + 1;
-    memcpy(data.data() + offset, mesh.m_pos.data(), mesh.m_pos.size() * sizeof(sge::Vertex));
-    offset += mesh.m_pos.size() * sizeof(sge::Vertex);
-    memcpy(data.data() + offset, indices.data(), indices.size() * sizeof(uint16_t));
-    file.write((const char*)data.data(), data.size());
-}
-
 void load_model(sge::App& app, const std::string_view path, const glm::mat4 rootMatrix = glm::mat4{1.f}) {
     Assimp::Importer importer;
-    unsigned int flags = aiProcess_FlipUVs | aiProcess_Triangulate;
-    // aiProcess_FlipWindingOrder | aiProcess_Triangulate |
-    //                                              aiProcess_GenUVCoords | aiProcess_GenUVCoords | aiProcess_FlipUVs |
-    //                                              aiProcess_PreTransformVertices | aiProcess_GenSmoothNormals;
+    unsigned int flags = aiProcess_FlipUVs | aiProcess_Triangulate | aiProcess_GenBoundingBoxes |
+                         aiProcess_GenUVCoords | aiProcess_GenSmoothNormals;
+
     auto scene = importer.ReadFile(path.data(), flags);
     if (scene == nullptr || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || scene->mRootNode == nullptr) {
         LOG_ERROR("CLIENT: Can't open file:" << path);
@@ -172,11 +140,9 @@ void load_model(sge::App& app, const std::string_view path, const glm::mat4 root
     }
 
     std::vector<sge::Mesh> meshes;
-    // const auto m = rootMatrix * (glm::rotate(glm::mat4{ 1.f }, glm::radians(180.f), glm::vec3{ 1.f, 0.f, 0.f }));
     auto& m = rootMatrix;
 
     processNode(scene->mRootNode, scene, path, meshes, m);
-    // export_to_Andrew_format(meshes[0]);
     app.loadModels(std::move(meshes));
 }
 
@@ -190,8 +156,7 @@ int main() {
 
         sge::App my_app({1280, 720}, "Vulkan engine");
 
-        load_model(my_app, "Models/WaterBottle/WaterBottle.gltf",
-                   glm::scale(glm::mat4{1.f}, glm::vec3(10.f, 10.f, 10.f)));
+        load_model(my_app, "Models/WaterBottle/WaterBottle.gltf");
         my_app.run();
     }
     return 0;
