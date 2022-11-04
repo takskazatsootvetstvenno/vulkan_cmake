@@ -156,9 +156,11 @@ void SwapChain::createSwapChain() {
     createInfo.oldSwapchain = VK_NULL_HANDLE;
     auto result = vkCreateSwapchainKHR(m_device.device(), &createInfo, nullptr, &m_swapChain);
     VK_CHECK_RESULT(result, "Failed to create swap chain!")
-    vkGetSwapchainImagesKHR(m_device.device(), m_swapChain, &imageCount, nullptr);
+    VK_CHECK_RESULT(vkGetSwapchainImagesKHR(m_device.device(), m_swapChain, &imageCount, nullptr),
+                    "Failed to get count of swapchain images");
     m_swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(m_device.device(), m_swapChain, &imageCount, m_swapChainImages.data());
+    VK_CHECK_RESULT(vkGetSwapchainImagesKHR(m_device.device(), m_swapChain, &imageCount, m_swapChainImages.data()),
+                    "Failed to get swapchain images");
     m_swapChainImageFormat = surfaceFormat.format;
     m_swapChainExtent = extent;
 }
@@ -256,7 +258,8 @@ VkResult SwapChain::submitCommandBuffers(const VkCommandBuffer* buffers, uint32_
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    vkResetFences(m_device.device(), 1, &m_inFlightFences[m_currentFrame]);  // Сброс fence
+    VK_CHECK_RESULT(vkResetFences(m_device.device(), 1, &m_inFlightFences[m_currentFrame]),
+                    "Failed to reset fence");  // Сброс fence
 
     auto result = vkQueueSubmit(
         m_device.graphicsQueue(), 1, &submitInfo,
@@ -277,11 +280,12 @@ VkResult SwapChain::submitCommandBuffers(const VkCommandBuffer* buffers, uint32_
 
     presentInfo.pImageIndices = imageIndex;
 
+    m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+
     result = vkQueuePresentKHR(
         m_device.presentQueue(),
         &presentInfo);  // Отправляем изображение в очередь представления, причём очередь представления будет дожидаться
                         // завершение выполнения командного буффера (всех команд, что попали в вызов vkQueueSubmit)
-    m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     return result;
 }
 

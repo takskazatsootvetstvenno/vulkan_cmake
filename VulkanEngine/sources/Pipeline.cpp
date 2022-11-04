@@ -53,13 +53,13 @@ void Pipeline::crateGraphicsPipeline(const PipelineConfigInfo& configInfo) {
 
     const auto& vertCode = m_shader.getVertexShader();
     const auto& fragCode = m_shader.getFragmentShader();
-    const auto& geometryCode = 
-        m_shader.isGeometryShaderPresent() ? m_shader.getGeometryShader() : std::vector<uint32_t>();
+    const auto& geometryCode = m_shader.isGeometryShaderPresent() ? m_shader.getGeometryShader() :
+                                                                    std::vector<uint32_t>();
 
     VkShaderModule vertShaderModule = createShaderModule(vertCode);
     VkShaderModule fragShaderModule = createShaderModule(fragCode);
-    VkShaderModule geomShaderModule = 
-        m_shader.isGeometryShaderPresent() ? createShaderModule(geometryCode) : VkShaderModule{};
+    VkShaderModule geomShaderModule = m_shader.isGeometryShaderPresent() ? createShaderModule(geometryCode) :
+                                                                           VkShaderModule{};
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -151,12 +151,8 @@ void Pipeline::crateGraphicsPipeline(const PipelineConfigInfo& configInfo) {
     pipelineInfo.basePipelineIndex = -1;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    auto result = vkCreateGraphicsPipelines(
-        m_device.device(),
-        VK_NULL_HANDLE, 1,
-        &pipelineInfo,
-        nullptr,
-        &m_graphicsPipeline);
+    auto result = vkCreateGraphicsPipelines(m_device.device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr,
+                                            &m_graphicsPipeline);
     VK_CHECK_RESULT(result, "Failed to create graphics pipeline")
     vkDestroyShaderModule(m_device.device(), vertShaderModule, nullptr);
     vkDestroyShaderModule(m_device.device(), fragShaderModule, nullptr);
@@ -224,7 +220,7 @@ bool Pipeline::recreatePipelineShaders() {
                      m_shader.getDefines());
     if (newShader.isValid() == true) {
         m_shader = std::move(newShader);
-        vkDeviceWaitIdle(m_device.device());
+        VK_CHECK_RESULT(vkDeviceWaitIdle(m_device.device()), "Failed to wait idle during recreationg pipeline shaders");
         vkDestroyPipeline(m_device.device(), m_graphicsPipeline, nullptr);
         crateGraphicsPipeline(m_pipelineInfo);
     } else {

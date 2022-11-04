@@ -28,8 +28,8 @@ class Device {
     Device(Device&&) = delete;
     Device& operator=(Device&&) = delete;
     const VkPhysicalDeviceProperties& getPhysicalDeviceProperties() const noexcept;
-    SwapChainSupportDetails getSwapChainSupport();
-    QueueFamilyIndices findPhysicalQueueFamilies();
+    SwapChainSupportDetails getSwapChainSupport() const;
+    QueueFamilyIndices findPhysicalQueueFamilies() const;
     VkDevice device() const noexcept;
     VkPhysicalDevice getPhysicalDevice() const noexcept { return m_physicalDevice; }
     VkSurfaceKHR surface() const noexcept;
@@ -37,9 +37,9 @@ class Device {
     VkQueue presentQueue() const noexcept;
     VkCommandPool getCommandPool() const noexcept;
     VkInstance getInstance() const noexcept;
-    bool enableValidationLayers() const noexcept;
+    bool isEnableValidationLayers() const noexcept;
     VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
-                                 VkFormatFeatureFlags features);
+                                 VkFormatFeatureFlags features) const;
     [[nodiscard]] VkImageView createImageView(const VkImage image, const VkFormat format,
                                               bool isCubeMap = false) noexcept;
     [[nodiscard]] VkSampler createTextureSampler(const VkSamplerCreateInfo& sampleInfo) const noexcept;
@@ -52,7 +52,7 @@ class Device {
                            uint32_t layerCount = 1) const;
     void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
                                uint32_t layerCount = 1) const;
-    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 
     void endSingleTimeCommands(const VkCommandBuffer commandBuffer) const;
     VkCommandBuffer beginSingleTimeCommands() const;
@@ -67,9 +67,9 @@ class Device {
     bool checkValidationLayerSupport();
     void createCommandPool();
 
-    std::vector<const char*> getRequiredExtentions();
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
-    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+    std::vector<const char*> getRequiredExtentions() const;
+    QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice device) const;
+    SwapChainSupportDetails querySwapChainSupport(const VkPhysicalDevice device) const;
     VkPhysicalDeviceProperties m_physicalProperties;
     Window& m_window;
     VkInstance m_instance;

@@ -30,7 +30,7 @@ void Renderer::recreateSwapChain() noexcept {
         extent = m_window.getExtent();
         glfwWaitEvents();
     }
-    vkDeviceWaitIdle(m_device.device());
+    VK_CHECK_RESULT(vkDeviceWaitIdle(m_device.device()), "Failed to device wait idle while recreating swapchain");
     m_swapChain = nullptr;
     m_swapChain = std::make_unique<SwapChain>(m_device, extent);
     LOG_MSG("New SwapChain has been created!");
@@ -45,9 +45,13 @@ void Renderer::createCommandBuffers() {
     allocInfo.commandBufferCount = static_cast<uint32_t>(m_commandBuffers.size());
     auto result = vkAllocateCommandBuffers(m_device.device(), &allocInfo, m_commandBuffers.data());
     VK_CHECK_RESULT(result, "Failed to allocate command buffers!")
-    if (m_device.enableValidationLayers()) {
+    if (m_device.isEnableValidationLayers()) {
         SetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(
             m_device.getInstance(), "vkSetDebugUtilsObjectNameEXT");
+        if (SetDebugUtilsObjectNameEXT == nullptr) {
+            LOG_ERROR("Can't load SetDebugUtilsObjectNameEXT!")
+            return;
+        }
         for (size_t i = 0; i < m_commandBuffers.size(); ++i) {
             std::string temp = "CB_" + std::to_string(i);
             VkDebugUtilsObjectNameInfoEXT cmd_buf = {
