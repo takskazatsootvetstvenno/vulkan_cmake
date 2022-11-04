@@ -21,12 +21,9 @@ namespace sge {
 App::App(glm::ivec2 windowSize, std::string windowName) : m_window(windowSize.x, windowSize.y, std::move(windowName)) {
     initEvents();
     m_camera.setViewCircleCamera(-15.f, 5.f);
-    m_camera.setPerspectiveProjection(
-        glm::radians(m_camera.getZoom()),
-        static_cast<float>(windowSize.x) / windowSize.y, 
-        0.1f,
-        256.f);
-    
+    m_camera.setPerspectiveProjection(glm::radians(m_camera.getZoom()), static_cast<float>(windowSize.x) / windowSize.y,
+                                      0.1f, 256.f);
+
     auto& mgr = MeshMGR::Instance();
     mgr.setDescriptorPool(DescriptorPool::Builder(m_device)
                               .setMaxSets(1024)
@@ -35,24 +32,13 @@ App::App(glm::ivec2 windowSize, std::string windowName) : m_window(windowSize.x,
                               .build());
 
     mgr.m_generalMatrixUBO = std::make_unique<Buffer>(
-        m_device,
-        sizeof(GlobalUbo),
-        1,
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        m_device, sizeof(GlobalUbo), 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     mgr.m_generalMatrixUBO->map();
-    mgr.m_debugUBO = std::make_unique<Buffer>(m_device,
-        sizeof(DebugUBO),
-        1,
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    mgr.m_debugUBO = std::make_unique<Buffer>(m_device, sizeof(DebugUBO), 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     mgr.m_debugUBO->map();
     mgr.m_normalTestUBO = std::make_unique<Buffer>(
-        m_device,
-        sizeof(NormalTestInfo),
-        1,
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        m_device, sizeof(NormalTestInfo), 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     mgr.m_normalTestUBO->map();
     m_model = std::make_unique<Model>(m_device);
     addSkybox();
@@ -202,29 +188,23 @@ void App::addSkybox() noexcept {
                                     .rightTexturePath = "data/Skybox/right.jpg"};
 
     float skyboxVertices[] = {// positions
-                              -1.0f,  1.0f, -1.0f, -1.0f, -1.0f, -1.0f,
-                               1.0f, -1.0f, -1.0f,  1.0f, -1.0f, -1.0f,
-                               1.0f,  1.0f, -1.0f, -1.0f,  1.0f, -1.0f,
+                              -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f,
+                              1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f,
 
-                              -1.0f, -1.0f,  1.0f, -1.0f, -1.0f, -1.0f,
-                              -1.0f,  1.0f, -1.0f, -1.0f,  1.0f, -1.0f,
-                              -1.0f,  1.0f,  1.0f, -1.0f, -1.0f,  1.0f,
+                              -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f,
+                              -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,
 
-                               1.0f, -1.0f, -1.0f,  1.0f, -1.0f,  1.0f,
-                               1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  1.0f,
-                               1.0f,  1.0f, -1.0f,  1.0f, -1.0f, -1.0f,
+                              1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,
+                              1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f,
 
-                              -1.0f, -1.0f,  1.0f, -1.0f,  1.0f,  1.0f,
-                               1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  1.0f,
-                               1.0f, -1.0f,  1.0f, -1.0f, -1.0f,  1.0f,
+                              -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  1.0f,
+                              1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
 
-                              -1.0f,  1.0f, -1.0f,  1.0f,  1.0f, -1.0f,
-                               1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  1.0f, 
-                              -1.0f,  1.0f,  1.0f, -1.0f,  1.0f, -1.0f,
+                              -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,
+                              1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f,
 
-                              -1.0f, -1.0f, -1.0f, -1.0f, -1.0f,  1.0f,
-                               1.0f, -1.0f, -1.0f,  1.0f, -1.0f, -1.0f,
-                              -1.0f, -1.0f,  1.0f,  1.0f, -1.0f,  1.0f};
+                              -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f,
+                              1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f};
     auto& mgr = MeshMGR::Instance();
     Mesh skyboxMesh;
     skyboxMesh.m_pos.resize(36);
@@ -272,7 +252,9 @@ void App::run() {
     m_model->createBuffers();
     auto& mgr = MeshMGR::Instance();
     init_imgui();
-    const std::array table{"Default", "getNormal()", "NormalTexture", "UV", "VertexNormal", "worldPos_in"};
+    const std::array table{
+        "Default", "Shader normal", "Base color", "Normal", "Occlusion", "Emissive", "Metallic", "Roughness",
+    };
     int currentItem = 0;
     while (!m_window.shouldClose()) {
         glfwPollEvents();
@@ -476,7 +458,9 @@ void App::loadModels(std::vector<Mesh>&& meshess) {
             VkDescriptorImageInfo MetallicRoughnessDescriptorImageInfo;
             VkDescriptorImageInfo NormalDescriptorImageInfo;
             VkDescriptorImageInfo EmissiveDescriptorImageInfo;
-
+            VkDescriptorImageInfo skyboxDescriptorInfo;
+            VkDescriptorImageInfo skyboxIrradianceDescriptorInfo;
+            VkDescriptorImageInfo brdfLUTDescriptorInfo;
             if (mesh.m_material.m_hasColorMap) {
                 auto baseColorPair = mgr.m_textures.try_emplace(mesh.m_material.m_baseColorPath,
                                                                 mesh.m_material.m_baseColorPath);
@@ -509,28 +493,30 @@ void App::loadModels(std::vector<Mesh>&& meshess) {
                 DW.writeImage(5, &EmissiveDescriptorImageInfo);
                 defines += "#define HAS_EMISSIVE_MAP\n";
             }
-
+            if (mesh.m_material.m_hasOcclusionMap) defines += "#define HAS_OCCLUSION_MAP\n";
             {
                 auto skyboxPair = mgr.m_textures.find("skybox");
                 if (skyboxPair == mgr.m_textures.end()) {
                     LOG_ERROR("Skybox texture is missing!");
                     assert(false && "Skybox texture is missing!");
                 }
-                auto skyboxDescriptorInfo = skyboxPair->second.getDescriptorInfo();
+                skyboxDescriptorInfo = skyboxPair->second.getDescriptorInfo();
                 DW.writeImage(8, &skyboxDescriptorInfo);
+
                 auto skyboxIrradiancePair = mgr.m_textures.find("skybox_irradiance");
                 if (skyboxIrradiancePair == mgr.m_textures.end()) {
                     LOG_ERROR("skybox_irradiance texture is missing!");
                     assert(false && "skybox_irradiance texture is missing!");
                 }
-                auto skyboxIrradianceDescriptorInfo = skyboxIrradiancePair->second.getDescriptorInfo();
+                skyboxIrradianceDescriptorInfo = skyboxIrradiancePair->second.getDescriptorInfo();
                 DW.writeImage(9, &skyboxIrradianceDescriptorInfo);
+
                 auto brdfLUT = mgr.m_textures.find("brdfLUT");
                 if (brdfLUT == mgr.m_textures.end()) {
                     LOG_ERROR("brdfLUT texture is missing!");
                     assert(false && "brdfLUT texture is missing!");
                 }
-                auto brdfLUTDescriptorInfo = brdfLUT->second.getDescriptorInfo();
+                brdfLUTDescriptorInfo = brdfLUT->second.getDescriptorInfo();
                 DW.writeImage(10, &brdfLUTDescriptorInfo);
             }
         }

@@ -29,6 +29,7 @@ class Mesh {
         float m_metallicFactor = 0.f;
         float m_roughnessFactor = 0.f;
 
+        bool m_hasOcclusionMap = false;
         bool m_hasColorMap = false;
         bool m_hasMetallicRoughnessMap = false;
         bool m_hasNormalMap = false;
@@ -41,6 +42,11 @@ class Mesh {
     };
 
     enum class MaterialType { PBR, Phong };
+
+    struct BoundingBox {
+        glm::vec3 min{};
+        glm::vec3 max{};
+    };
 
     Mesh() = default;
     ~Mesh() = default;
@@ -62,7 +68,7 @@ class Mesh {
     std::vector<uint32_t> m_ind;
     std::unique_ptr<Buffer> m_vertexBuffer;
     std::unique_ptr<Buffer> m_indexBuffer;
-
+    BoundingBox m_boundingBox;
     uint32_t m_pipelineId = 0;
     uint32_t m_descriptorSetId = 0;
     Material m_material;

@@ -25,7 +25,7 @@ layout(set = 0, binding = 100) uniform DebugUBO
 const float M_PI = 3.141592653589793;
 const vec3 lightPoint = vec3(1.f, -2.f, 1.f);
 const float gamma = 2.2f;
-
+const float scaleIBL = 1.f;
 #ifdef HAS_COLOR_MAP
 	layout(set = 0, binding = 2) uniform sampler2D baseColorSampler;
 #endif
@@ -80,7 +80,6 @@ vec3 getNormal()
 {
 #ifdef HAS_NORMAL_MAP
 	vec3 normalMap = texture(NormalSampler, texCoords_in).xyz * 2.0 - 1.0;
-#endif
 
 	vec3 q1 = dFdx(worldPos_in);
 	vec3 q2 = dFdy(worldPos_in);
@@ -91,13 +90,12 @@ vec3 getNormal()
 	vec3 T = normalize(q1 * st2.t - q2 * st1.t);
 	vec3 B = -normalize(cross(N, T));
 	mat3 TBN = mat3(T, B, N);
-	
-#ifdef HAS_NORMAL_MAP	
-	vec3 n = normalize(TBN * normalMap);
+
+	vec3 n = TBN * normalMap;
 #else
-	vec3 n = N;
+	vec3 n = norm_in;
 #endif
-	return n;
+	return normalize(n);
 }
 
 vec4 SRGBtoLINEAR(vec4 srgbIn)
@@ -108,7 +106,7 @@ vec4 SRGBtoLINEAR(vec4 srgbIn)
 }
 
 vec3 getIBLContribution(vec3 diffuseColor, vec3 specularColor, vec3 n, vec3 reflection, float NdotV, float roughness ){
-	vec3 diffuse = SRGBtoLINEAR(texture(irradiance, -n)).rgb;
+	vec3 diffuse = SRGBtoLINEAR(texture(irradiance, n)).rgb;
 
 	vec3 brdf = texture(brdfLUT, vec2(NdotV, 1.0 - roughness)).rgb;
 
@@ -117,15 +115,15 @@ vec3 getIBLContribution(vec3 diffuseColor, vec3 specularColor, vec3 n, vec3 refl
 	diffuse *= diffuseColor;
 	specular *= (specularColor * brdf.x + brdf.y);
 
-	diffuse *= 0.3;
-	specular *= 0.3;
+	diffuse *= scaleIBL;
+	specular *= scaleIBL * 0.5f;
 
-	return diffuse+specular;
+	return diffuse + specular;
 }
 
 void main() {
                                                                                 
-	const vec3 L = normalize(lightPoint - worldPos_in); //normalize(localUBO.lightDirection.xyz);
+	const vec3 L = normalize(localUBO.lightDirection.xyz);//normalize(lightPoint - worldPos_in);
 	const vec3 V = normalize(cameraPosition_in - worldPos_in);
 
 	const vec3 N = getNormal();
@@ -145,8 +143,8 @@ void main() {
 
 #ifdef HAS_METALLIC_ROUGHNESS_MAP
 	vec3 value = texture(MRSampler, texCoords_in).rgb;
-	float metallic = value.g;
-	float roughness = value.b;
+	float metallic = value.b * localUBO.metallic;
+	float roughness = value.g * localUBO.roughness;
 #else
 	float metallic = localUBO.metallic;
 	float roughness = localUBO.roughness;
@@ -174,43 +172,67 @@ void main() {
 	                
 	const vec3 diffuseContrib = (1.0 - F) * fDiffuse(diffuseColor);
 	const vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);
-	//vec3 color = (diffuseContrib + specContrib) * getPointLightColor() * NdotL;   
+  
 	vec3 color = (diffuseContrib + specContrib) * vec3(1.f) * NdotL;
 	vec3 reflection = -normalize(reflect(V, N));
 
-	color += getIBLContribution(diffuseColor,specularColor, N, reflection, NdotV, roughness);
-	//vec3 reflection = -normalize(reflect(V, N));
+	color += getIBLContribution(diffuseColor, specularColor, N, reflection, NdotV, roughness);
 
-	//color += 0.5f*vec3(texture(CubemapSampler, N));
-
+#ifdef HAS_OCCLUSION_MAP
+	float ao = texture(MRSampler, texCoords_in).r;
+	color = mix(color, color * ao, 1.f);
+#endif
 #ifdef HAS_EMISSIVE_MAP
-	vec3 emissive = texture(EmissiveSampler, texCoords_in).rgb;
+	vec3 emissive = SRGBtoLINEAR(texture(EmissiveSampler, texCoords_in)).rgb;
 	color += emissive;
 #endif
 	
-	outColor = vec4(pow(color, vec3(1.f/gamma)), 1.f);
+	outColor = vec4(color, basecolor.a);
 
 	switch(debug.outType)
 	{
 	case 0:
-		outColor = vec4(pow(color, vec3(1.f/gamma)), 1.f);
+		outColor = vec4(color, 1.f);
 		break;
 	case 1:
 		outColor = (vec4(getNormal(), 1.f) + 1.f) / 2.f;
 		break;
 	case 2:
+		outColor = vec4(1.f, 0.f, 0.f, 1.f);
+#ifdef HAS_COLOR_MAP
+		outColor = vec4(texture(baseColorSampler, texCoords_in));
+#endif
+		break;
+	case 3:
+		outColor = vec4(1.f, 0.f, 0.f, 1.f);
 #ifdef HAS_NORMAL_MAP
 		outColor = vec4(texture(NormalSampler, texCoords_in).xyz, 1.f);
 #endif
 		break;
-	case 3:
-		outColor = (vec4(texCoords_in, 0.f, 0.f) + 1.f) /2.f;		
-		break;
 	case 4:
-		outColor = (vec4(normalize(norm_in), 1.f) + 1.f) / 2.f;
+		outColor = vec4(1.f, 0.f, 0.f, 1.f);
+#ifdef HAS_OCCLUSION_MAP
+		outColor = vec4((texture(MRSampler, texCoords_in).rrr), 1.f);
+#endif
 		break;
 	case 5:
-		outColor = (vec4(normalize(worldPos_in), 1.f) + 1.f) / 2.f;
+		outColor = vec4(1.f, 0.f, 0.f, 1.f);
+#ifdef HAS_EMISSIVE_MAP
+		outColor = vec4(texture(EmissiveSampler, texCoords_in).rgb, 1.f);
+#endif
+		break;
+	case 6:
+		outColor = vec4(1.f, 0.f, 0.f, 1.f);
+#ifdef HAS_METALLIC_ROUGHNESS_MAP
+		outColor = vec4((texture(MRSampler, texCoords_in).bbb), 1.f);
+#endif
+		break;
+	case 7:
+		outColor = vec4(1.f, 0.f, 0.f, 1.f);
+#ifdef HAS_METALLIC_ROUGHNESS_MAP
+		outColor = vec4((texture(MRSampler, texCoords_in).ggg), 1.f);
+#endif
 		break;
 	}
+	outColor.rgb = pow(outColor.rgb, vec3(1.f/gamma));
 }
