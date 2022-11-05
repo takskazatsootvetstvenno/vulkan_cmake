@@ -9,6 +9,7 @@
 
 #include <climits>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 using namespace std;
@@ -64,33 +65,39 @@ void processMesh(aiMesh* aiMesh, const aiScene* scene, std::string_view basePath
     aiString str1;
     ai_material->GetTexture(aiTextureType_LIGHTMAP, 0, &str1);
     static size_t meshID = 0;
+    const std::filesystem::path unicodePath = basePath;
+    std::string parentPath = reinterpret_cast<const char*>(unicodePath.parent_path().u8string().c_str());
+    parentPath = parentPath + "/";
     mesh.setName(std::to_string(meshID) + " | " + std::string(basePath));
     ++meshID;
+
+    /*
     if (auto basePosPathToFile = basePath.find_last_of('/'); basePosPathToFile != basePath.npos)
         basePath.remove_suffix(basePath.size() - basePosPathToFile - 1);
     else
-        basePath = "";
+        basePath = "";*/
+    //basePath = std::string(reinterpret_cast<const char*>(parentPath.c_str()));
     if (mesh.m_material.m_hasColorMap) {
         aiString str;
         ai_material->GetTexture(aiTextureType_BASE_COLOR, 0, &str);
         if (str.length == 0) { ai_material->GetTexture(aiTextureType_DIFFUSE, 0, &str); }
-        mesh.m_material.m_baseColorPath = std::string(basePath) + str.C_Str();
+        mesh.m_material.m_baseColorPath = parentPath + str.C_Str();
     }
     if (mesh.m_material.m_hasMetallicRoughnessMap) {
         aiString str;
         // ai_material->GetTexture(aiTextureType_LIGHTMAP, 0, &str);
         ai_material->GetTexture(aiTextureType_UNKNOWN, 0, &str);
-        mesh.m_material.m_MetallicRoughnessPath = std::string(basePath) + str.C_Str();
+        mesh.m_material.m_MetallicRoughnessPath = parentPath + str.C_Str();
     }
     if (mesh.m_material.m_hasEmissiveMap) {
         aiString str;
         ai_material->GetTexture(aiTextureType_EMISSIVE, 0, &str);
-        mesh.m_material.m_EmissivePath = std::string(basePath) + str.C_Str();
+        mesh.m_material.m_EmissivePath = parentPath + str.C_Str();
     }
     if (mesh.m_material.m_hasNormalMap) {
         aiString str;
         ai_material->GetTexture(aiTextureType_NORMALS, 0, &str);
-        mesh.m_material.m_NormalPath = std::string(basePath) + str.C_Str();
+        mesh.m_material.m_NormalPath = parentPath + str.C_Str();
     }
 
     aiShadingMode mode;
@@ -131,8 +138,9 @@ void load_model(sge::App& app, const std::string_view path, const glm::mat4 root
     Assimp::Importer importer;
     unsigned int flags = aiProcess_FlipUVs | aiProcess_Triangulate | aiProcess_GenBoundingBoxes |
                          aiProcess_GenUVCoords | aiProcess_GenSmoothNormals;
-
-    auto scene = importer.ReadFile(path.data(), flags);
+    const std::filesystem::path unicodePath = path;
+    
+    auto scene = importer.ReadFile(reinterpret_cast<const char*>(unicodePath.u8string().c_str()), flags);
     if (scene == nullptr || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || scene->mRootNode == nullptr) {
         LOG_ERROR("CLIENT: Can't open file:" << path);
         app.loadModels(std::vector<sge::Mesh>());
@@ -146,7 +154,7 @@ void load_model(sge::App& app, const std::string_view path, const glm::mat4 root
     app.loadModels(std::move(meshes));
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     {
 #ifdef _DEBUG
 #    ifdef _MSC_VER
@@ -156,7 +164,9 @@ int main() {
 
         sge::App my_app({1280, 720}, "Vulkan engine");
 
-        load_model(my_app, "Models/WaterBottle/WaterBottle.gltf");
+        for (auto i = 1; i < argc; ++i) load_model(my_app, argv[i]);
+
+        // load_model(my_app, "Models/WaterBottle/WaterBottle.gltf");
         my_app.run();
     }
     return 0;

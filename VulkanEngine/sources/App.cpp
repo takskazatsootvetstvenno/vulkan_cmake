@@ -300,7 +300,7 @@ void App::run() {
         ImGui::Text("%s", (std::string("Camera position: \n") + std::to_string(m_camera.getCameraPos().x) + " " +
                            std::to_string(m_camera.getCameraPos().y) + " " + std::to_string(m_camera.getCameraPos().z))
                               .c_str());
-        if (ImGui::TreeNode("Meshes")) {
+        if (ImGui::TreeNode(std::string("Meshes (" + std::to_string(mgr.m_meshes.size()) + ")").c_str())) {
             for (const auto& mesh : mgr.m_meshes) {
                 if (ImGui::TreeNode(mesh.getName().c_str())) {
                     ImGui::Text("%s", std::string("Pipeline ID: " + std::to_string(mesh.getPipelineId())).c_str());
