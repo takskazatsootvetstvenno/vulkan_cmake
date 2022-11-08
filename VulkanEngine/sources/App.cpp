@@ -142,6 +142,7 @@ void App::initEvents() noexcept {
                                           0.1f, 100.f);
     });
     m_eventDispatcher.add_event_listener<EventWindowResize>([&](EventWindowResize&) {
+        if (m_window.getExtent().width <= 0.1f || m_window.getExtent().height <= 0.1f) return;
         m_camera.setPerspectiveProjection(glm::radians(m_camera.getZoom()),
                                           static_cast<float>(m_window.getExtent().width) / m_window.getExtent().height,
                                           0.1f, 100.f);

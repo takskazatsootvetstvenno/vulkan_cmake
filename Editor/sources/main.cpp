@@ -71,12 +71,6 @@ void processMesh(aiMesh* aiMesh, const aiScene* scene, std::string_view basePath
     mesh.setName(std::to_string(meshID) + " | " + std::string(basePath));
     ++meshID;
 
-    /*
-    if (auto basePosPathToFile = basePath.find_last_of('/'); basePosPathToFile != basePath.npos)
-        basePath.remove_suffix(basePath.size() - basePosPathToFile - 1);
-    else
-        basePath = "";*/
-    //basePath = std::string(reinterpret_cast<const char*>(parentPath.c_str()));
     if (mesh.m_material.m_hasColorMap) {
         aiString str;
         ai_material->GetTexture(aiTextureType_BASE_COLOR, 0, &str);
@@ -85,7 +79,6 @@ void processMesh(aiMesh* aiMesh, const aiScene* scene, std::string_view basePath
     }
     if (mesh.m_material.m_hasMetallicRoughnessMap) {
         aiString str;
-        // ai_material->GetTexture(aiTextureType_LIGHTMAP, 0, &str);
         ai_material->GetTexture(aiTextureType_UNKNOWN, 0, &str);
         mesh.m_material.m_MetallicRoughnessPath = parentPath + str.C_Str();
     }
@@ -164,9 +157,12 @@ int main(int argc, char* argv[]) {
 
         sge::App my_app({1280, 720}, "Vulkan engine");
 
-        for (auto i = 1; i < argc; ++i) load_model(my_app, argv[i]);
+        for (auto i = 1; i < argc; ++i) { 
+            LOG_MSG("Loading model: " << argv[i])
+            load_model(my_app, argv[i]); 
+            LOG_MSG("Loading model: " << argv[i] << " Complete!")
+        }
 
-        // load_model(my_app, "Models/WaterBottle/WaterBottle.gltf");
         my_app.run();
     }
     return 0;
