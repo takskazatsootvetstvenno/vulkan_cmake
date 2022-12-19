@@ -3,6 +3,7 @@
 #include "Shader.h"
 
 #include <Descriptors.h>
+#include "PipelineInputData.h"
 
 #include <string>
 #include <vector>
@@ -71,5 +72,6 @@ class Pipeline {
     Device& m_device;
     Shader m_shader;
     VkPipeline m_graphicsPipeline;
+   // PipelineInputData m_pipelineData;
 };
 }  // namespace sge

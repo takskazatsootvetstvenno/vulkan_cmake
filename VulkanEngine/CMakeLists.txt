@@ -23,6 +23,7 @@ set(CORE_INCLUDES
 	includes/Event.h
 	includes/Shader.h
 	includes/Texture.h
+	includes/PipelineInputData.h
 )
 set(CORE_SOURCES
 	sources/Renderer.cpp
@@ -40,6 +41,7 @@ set(CORE_SOURCES
 	sources/MeshMGR.cpp
 	sources/Shader.cpp
 	sources/Texture.cpp
+	sources/PipelineInputData.cpp
 )
 add_library(${CORE_PROJECT_NAME} STATIC
 	${CORE_INCLUDES}

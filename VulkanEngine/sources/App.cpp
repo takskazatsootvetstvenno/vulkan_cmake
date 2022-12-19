@@ -176,6 +176,41 @@ void App::addNormalTestPipeline() noexcept {
                        std::move(states));
         LOG_MSG("Pipeline name: " << mgr.m_pipelines.back().name << ": "
                                   << mgr.m_pipelines.back().pipeline->getShader().getFragmentShaderPath());
+
+
+
+
+        /*TO DO
+        REMOVE IT!*/
+        PipelineInputData::VertexData vertexInput(Vertex::getBindingDescription(), Vertex::getAttributeDescription());
+        Shader glslNormalShader2("data/Shaders/GLSL/Normal/normal.vert", "data/Shaders/GLSL/Normal/normal.frag",
+                                "data/Shaders/GLSL/Normal/normal.geom");
+        std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachment(2);
+        colorBlendAttachment[0].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                                                 VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachment[0].blendEnable = VK_FALSE;
+        colorBlendAttachment[0].srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment[0].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+        colorBlendAttachment[0].colorBlendOp = VK_BLEND_OP_ADD;
+        colorBlendAttachment[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        colorBlendAttachment[0].alphaBlendOp = VK_BLEND_OP_ADD;
+
+        // VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+        colorBlendAttachment[1].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                                                 VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachment[1].blendEnable = VK_FALSE;
+        colorBlendAttachment[1].srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment[1].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+        colorBlendAttachment[1].colorBlendOp = VK_BLEND_OP_ADD;
+        colorBlendAttachment[1].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment[1].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        colorBlendAttachment[1].alphaBlendOp = VK_BLEND_OP_ADD;
+        PipelineInputData pipelineData(vertexInput, glslNormalShader2, colorBlendAttachment,
+                                       descriptorLayout->getDescriptorSetLayout(), m_window.getExtent().width,
+                                       m_window.getExtent().height);
+        //Pipeline
+
     }
     mgr.m_sets.emplace_back(std::move(descriptorLayout), nullptr, descriptorSet);
     m_normalPipelineDescriptorSetID = mgr.m_sets.size() - 1;
