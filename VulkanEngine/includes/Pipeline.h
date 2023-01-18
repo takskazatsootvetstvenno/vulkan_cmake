@@ -31,47 +31,29 @@ struct FixedPipelineStates  // TO DO add enums and abstractions
     CullingMode cullingMode = CullingMode::BACK;
     FrontFace frontFace = FrontFace::COUNTER_CLOCKWISE;
 };
-struct PipelineConfigInfo {
-    PipelineConfigInfo() = default;
-    PipelineConfigInfo(const PipelineConfigInfo&) = delete;
-    PipelineConfigInfo& operator=(const PipelineConfigInfo&) = delete;
-    PipelineConfigInfo(PipelineConfigInfo&&) = default;
-    PipelineConfigInfo& operator=(PipelineConfigInfo&&) = default;
 
-    VkPipelineViewportStateCreateInfo viewportInfo;
-    VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo;
-    VkPipelineRasterizationStateCreateInfo rasterizationInfo;
-    VkPipelineMultisampleStateCreateInfo multisampleInfo;
-    VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
-    VkPipelineLayout pipelineLayout = nullptr;
-    VkRenderPass renderPass = nullptr;
-    VkViewport viewport;
-    VkRect2D scissor;
-    uint32_t subpass = 0;
-    FixedPipelineStates userDefinedStates;
-};
 class Pipeline {
  public:
-    Pipeline(Device& device, Shader&& shader, PipelineConfigInfo&& configInfo);
+    Pipeline(Device& device, const PipelineInputData& pipelineData);
+    Pipeline(Device& device, PipelineInputData&& pipelineData);
     Pipeline(const Pipeline&) = delete;
     Pipeline& operator=(const Pipeline&) = delete;
     Pipeline(Pipeline&&) = delete;
     Pipeline& operator=(Pipeline&&) = delete;
     ~Pipeline();
 
-    const Shader& getShader() const noexcept;
-    void crateGraphicsPipeline(const PipelineConfigInfo& configInfo);
+    const Shader& getShader() noexcept;
+    void crateGraphicsPipeline();
     void bind(VkCommandBuffer commandBuffer) const noexcept;
-    FixedPipelineStates getPipelineStates() const noexcept;
-    static PipelineConfigInfo createDefaultPipeline(uint32_t width, uint32_t height, FixedPipelineStates states);
+    //static PipelineConfigInfo createDefaultPipeline(uint32_t width, uint32_t height, FixedPipelineStates states);
+    static std::vector<VkPipelineColorBlendAttachmentState> createDefaultColorAttachments();
+    static const VkPipelineLayout createPipeLineLayout(const VkDevice device, VkDescriptorSetLayout setLayout);
     bool recreatePipelineShaders();
 
  private:
     VkShaderModule createShaderModule(const std::vector<uint32_t>& code);
-    PipelineConfigInfo m_pipelineInfo;
     Device& m_device;
-    Shader m_shader;
     VkPipeline m_graphicsPipeline;
-   // PipelineInputData m_pipelineData;
+    PipelineInputData m_pipelineData;
 };
 }  // namespace sge

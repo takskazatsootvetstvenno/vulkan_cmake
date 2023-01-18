@@ -172,44 +172,11 @@ void App::addNormalTestPipeline() noexcept {
         m_normalPipelineID = mgr.m_pipelines.size();
         mgr.m_pipelines.emplace_back(std::to_string(m_normalPipelineID) + " Normal_test", pipelineLayoutSkybox, nullptr);
         FixedPipelineStates states{.cullingMode = CullingMode::NONE};
-        createPipeline(pipelineLayoutSkybox, mgr.m_pipelines.back().pipeline, std::move(glslNormalShader),
+        createPipeline(descriptorLayout->getDescriptorSetLayout(), mgr.m_pipelines.back().pipeline,
+                       std::move(glslNormalShader),
                        std::move(states));
         LOG_MSG("Pipeline name: " << mgr.m_pipelines.back().name << ": "
                                   << mgr.m_pipelines.back().pipeline->getShader().getFragmentShaderPath());
-
-
-
-
-        /*TO DO
-        REMOVE IT!*/
-        PipelineInputData::VertexData vertexInput(Vertex::getBindingDescription(), Vertex::getAttributeDescription());
-        Shader glslNormalShader2("data/Shaders/GLSL/Normal/normal.vert", "data/Shaders/GLSL/Normal/normal.frag",
-                                "data/Shaders/GLSL/Normal/normal.geom");
-        std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachment(2);
-        colorBlendAttachment[0].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                                                 VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachment[0].blendEnable = VK_FALSE;
-        colorBlendAttachment[0].srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-        colorBlendAttachment[0].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-        colorBlendAttachment[0].colorBlendOp = VK_BLEND_OP_ADD;
-        colorBlendAttachment[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        colorBlendAttachment[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-        colorBlendAttachment[0].alphaBlendOp = VK_BLEND_OP_ADD;
-
-        // VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-        colorBlendAttachment[1].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                                                 VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachment[1].blendEnable = VK_FALSE;
-        colorBlendAttachment[1].srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-        colorBlendAttachment[1].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-        colorBlendAttachment[1].colorBlendOp = VK_BLEND_OP_ADD;
-        colorBlendAttachment[1].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        colorBlendAttachment[1].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-        colorBlendAttachment[1].alphaBlendOp = VK_BLEND_OP_ADD;
-        PipelineInputData pipelineData(vertexInput, glslNormalShader2, colorBlendAttachment,
-                                       descriptorLayout->getDescriptorSetLayout(), m_window.getExtent().width,
-                                       m_window.getExtent().height);
-        //Pipeline
 
     }
     mgr.m_sets.emplace_back(std::move(descriptorLayout), nullptr, descriptorSet);
@@ -371,8 +338,7 @@ void App::run() {
             if (m_renderer.endFrame() == true)
                 for (auto& pipeline : mgr.m_pipelines) {
                     Shader prevShader = pipeline.pipeline->getShader();
-                    createPipeline(pipeline.pipelineLayout, pipeline.pipeline, std::move(prevShader),
-                                   pipeline.pipeline->getPipelineStates());
+                    createPipeline(pipeline.pipelineLayout, pipeline.pipeline, std::move(prevShader));
                 }
         }
     }
@@ -381,6 +347,8 @@ void App::run() {
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 }
+
+
 
 const VkPipelineLayout App::createPipeLineLayout(VkDescriptorSetLayout setLayout) noexcept {
     VkPipelineLayout pipelineLayout;
@@ -579,7 +547,7 @@ void App::loadModels(std::vector<Mesh>&& meshess) {
                         mgr.m_pipelines.emplace_back(std::to_string(mgr.m_pipelines.size()) + " Phong_GLSL",
                                                      pipelineLayoutGLSLPhong, nullptr);
                         mesh.m_pipelineId = mgr.m_pipelines.size() - 1;
-                        createPipeline(pipelineLayoutGLSLPhong, mgr.m_pipelines.back().pipeline,
+                        createPipeline(descriptorLayout->getDescriptorSetLayout(), mgr.m_pipelines.back().pipeline,
                                        std::move(glslPhongShader));
                         LOG_MSG("Pipeline name: "
                                 << mgr.m_pipelines[mesh.m_pipelineId].name << ": "
@@ -596,7 +564,8 @@ void App::loadModels(std::vector<Mesh>&& meshess) {
                         mesh.m_pipelineId = mgr.m_pipelines.size() - 1;
                         FixedPipelineStates states{};
                         states.cullingMode = CullingMode::BACK;
-                        createPipeline(pipelineLayoutGLSLPBR, mgr.m_pipelines.back().pipeline, std::move(glslPBRShader),
+                        createPipeline(descriptorLayout->getDescriptorSetLayout(), mgr.m_pipelines.back().pipeline,
+                                       std::move(glslPBRShader),
                                        std::move(states));
                         LOG_MSG("Pipeline name: "
                                 << mgr.m_pipelines[mesh.m_pipelineId].name << ": "
@@ -607,7 +576,7 @@ void App::loadModels(std::vector<Mesh>&& meshess) {
                     {
                         auto pipelineLayoutGLSLPhong = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
                         mgr.m_pipelines.emplace_back(std::to_string(mgr.m_pipelines.size()) + " Phong_GLSL", pipelineLayoutGLSLPhong, nullptr);
-                        createPipeline(pipelineLayoutGLSLPhong, mgr.m_pipelines.back().pipeline, std::move(glslPhongShader));
+                        createPipeline(descriptorLayout->getDescriptorSetLayout(), mgr.m_pipelines.back().pipeline, std::move(glslPhongShader));
                     }
 #endif
                     break;
@@ -634,17 +603,35 @@ void App::loadModels(std::vector<Mesh>&& meshess) {
                       std::make_move_iterator(meshess.end()));
 }
 
-void App::createPipeline(VkPipelineLayout& pipelineLayout, std::unique_ptr<Pipeline>& pipeline, Shader&& shader,
-                         FixedPipelineStates states) noexcept {
-    assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
-    assert(shader.isValid() != false && "Cannot create pipeline with invalid shader");
+void App::createPipeline(const VkDescriptorSetLayout descriptorSetLayout, std::unique_ptr<Pipeline>& pipeline,
+                         Shader&& shader, FixedPipelineStates states) {
+    PipelineInputData::VertexData vertexData(Vertex::getBindingDescription(), Vertex::getAttributeDescription());
+    PipelineInputData::ColorBlendData colorBlendData(Pipeline::createDefaultColorAttachments());
+    auto pipelineLayout = Pipeline::createPipeLineLayout(m_device.device(), descriptorSetLayout);
+    PipelineInputData::FixedFunctionsStages fixedFunctionStages(m_window.getExtent().width, m_window.getExtent().height);
+    auto renderPass = m_renderer.getSwapChainRenderPass();
 
-    auto pipeline_config = Pipeline::createDefaultPipeline(m_window.getExtent().width, m_window.getExtent().height,
-                                                           std::move(states));
-
-    pipeline_config.renderPass = m_renderer.getSwapChainRenderPass();
-    pipeline_config.pipelineLayout = pipelineLayout;
-    pipeline = std::make_unique<Pipeline>(m_device, std::move(shader), std::move(pipeline_config));
-    LOG_MSG("New Pipeline has been created!");
+    PipelineInputData pipeline_data {
+        vertexData,
+        shader,
+        colorBlendData,
+        pipelineLayout,
+        fixedFunctionStages,
+        renderPass
+    };
+    pipeline = std::make_unique<Pipeline>(m_device, std::move(pipeline_data));
 }
+
+void App::createPipeline(const VkPipelineLayout pipelineLayout, std::unique_ptr<Pipeline>& pipeline, Shader&& shader,
+    FixedPipelineStates states) {
+    PipelineInputData::VertexData vertexData(Vertex::getBindingDescription(), Vertex::getAttributeDescription());
+    PipelineInputData::ColorBlendData colorBlendData(Pipeline::createDefaultColorAttachments());
+    PipelineInputData::FixedFunctionsStages fixedFunctionStages(m_window.getExtent().width, m_window.getExtent().height);
+    auto renderPass = m_renderer.getSwapChainRenderPass();
+
+    PipelineInputData pipeline_data{vertexData,          shader,    colorBlendData, pipelineLayout,
+                                    fixedFunctionStages, renderPass};
+    pipeline = std::make_unique<Pipeline>(m_device, std::move(pipeline_data));
+}
+
 }  // namespace sge

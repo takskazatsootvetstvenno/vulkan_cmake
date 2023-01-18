@@ -46,8 +46,11 @@ class App {
     void loadModels(std::vector<Mesh>&& meshes);
 
  private:
-    void createPipeline(VkPipelineLayout& pipelineLayout, std::unique_ptr<Pipeline>& pipeline, Shader&& shader,
-                        FixedPipelineStates states = FixedPipelineStates()) noexcept;
+    void createPipeline(const VkPipelineLayout pipelineLayout, std::unique_ptr<Pipeline>& pipeline, Shader&& shader,
+                        FixedPipelineStates states = FixedPipelineStates());
+
+    void createPipeline(const VkDescriptorSetLayout descriptorSetLayout, std::unique_ptr<Pipeline>& pipeline,
+                        Shader&& shader, FixedPipelineStates states = FixedPipelineStates());
     const VkPipelineLayout createPipeLineLayout(VkDescriptorSetLayout setLayout) noexcept;
     void renderObjects(VkCommandBuffer commandBuffer) noexcept;
     void initEvents() noexcept;

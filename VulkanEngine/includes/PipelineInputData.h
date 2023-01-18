@@ -7,29 +7,33 @@
 #include <cassert>
 #include <vector>
 
+
 namespace sge {
+class Pipeline;
 
-class PipelineInputData {
+class PipelineInputData final {
  public:
-
-    class VertexData {
+    class VertexData final {
+        friend class sge::Pipeline;
      public:
         VertexData(const std::vector<VkVertexInputBindingDescription>& bindingDescriptions,
-                        const std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
+                   const std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
         VertexData(std::vector<VkVertexInputBindingDescription>&& bindingDescriptions,
-                        std::vector<VkVertexInputAttributeDescription>&& attributeDescriptions) noexcept;
+                   std::vector<VkVertexInputAttributeDescription>&& attributeDescriptions) noexcept;
 
      private:
         std::vector<VkVertexInputBindingDescription> m_bindingsDescriptions;
         std::vector<VkVertexInputAttributeDescription> m_attributeDescriptions;
     };
 
-    class ColorBlendData {
+    class ColorBlendData final {
+        friend class sge::Pipeline;
      public:
         ColorBlendData(const std::vector<VkPipelineColorBlendAttachmentState>& colorBlendAttachments);
         ColorBlendData(std::vector<VkPipelineColorBlendAttachmentState>&& colorBlendAttachments) noexcept;
         void setBlendConstants(const std::array<float, 4>& blendConstants) noexcept;
         void setLogicData(VkBool32 logicOpEnable, VkLogicOp logicOp) noexcept;
+
      private:
         std::vector<VkPipelineColorBlendAttachmentState> m_colorBlendAttachments;
         VkBool32 m_logicOpEnable = VK_FALSE;
@@ -37,7 +41,8 @@ class PipelineInputData {
         std::array<float, 4> m_blendConstants{};
     };
 
-    class FixedFunctionsStages {
+    class FixedFunctionsStages final {
+        friend class sge::Pipeline;
      public:
         FixedFunctionsStages(const float width, const float height);
 
@@ -94,22 +99,33 @@ class PipelineInputData {
     };
 
     PipelineInputData(VertexData&& vertexData, Shader&& shader, ColorBlendData&& colorBlendData,
-                      VkDescriptorSetLayout descriptorLayout, const float width,
-                      const float height)
-        : m_vertexData(std::move(vertexData)), m_shader(std::move(shader)), m_fixedFunctionStage(width, height),
-          m_colorBlendData(std::move(colorBlendData)), m_descriptorLayout(descriptorLayout){};
+                      VkPipelineLayout pipelineLayout, FixedFunctionsStages&& fixedFunctionStage,
+                      VkRenderPass renderPass)
+        : m_vertexData(std::move(vertexData)), m_shader(std::move(shader)),
+          m_fixedFunctionStage(std::move(fixedFunctionStage)), m_colorBlendData(std::move(colorBlendData)),
+          m_pipelineLayout(pipelineLayout), m_renderPass(renderPass){};
 
-    PipelineInputData(const VertexData& vertexData, const Shader& shader,
-                      const ColorBlendData& colorBlendData, VkDescriptorSetLayout descriptorLayout,
-        const float width, const float height)
-        : m_vertexData(vertexData), m_shader(shader), m_fixedFunctionStage(width, height),
-          m_colorBlendData(colorBlendData), m_descriptorLayout(descriptorLayout){};
+    PipelineInputData(const VertexData& vertexData, const Shader& shader, const ColorBlendData& colorBlendData,
+                      VkPipelineLayout pipelineLayout, const FixedFunctionsStages& fixedFunctionStage,
+                      VkRenderPass renderPass)
+        : m_vertexData(vertexData), m_shader(shader), m_fixedFunctionStage(fixedFunctionStage),
+          m_colorBlendData(colorBlendData), m_pipelineLayout(pipelineLayout), m_renderPass(renderPass){};
+
+    const FixedFunctionsStages& getFixedFunctionsStages() { return m_fixedFunctionStage; }
+    const VertexData& getVertexData() { return m_vertexData; }
+    Shader& getShader() { return m_shader; }
+    const ColorBlendData& getColorBlendData() { return m_colorBlendData; }
+    const VkPipelineLayout getPipelineLayout() { return m_pipelineLayout; }
+    const VkRenderPass getRenderPass() { return m_renderPass; }
+    const uint32_t getSubpass() { return m_subpass; }
 
  private:
     VertexData m_vertexData;
     Shader m_shader;
     FixedFunctionsStages m_fixedFunctionStage;
     ColorBlendData m_colorBlendData;
-    VkDescriptorSetLayout m_descriptorLayout;
+    VkPipelineLayout m_pipelineLayout;
+    VkRenderPass m_renderPass;
+    uint32_t m_subpass = 0;
 };
 }  // namespace sge
