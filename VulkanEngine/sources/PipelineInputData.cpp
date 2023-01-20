@@ -1,6 +1,39 @@
 #include "PipelineInputData.h"
 
 namespace sge {
+
+constexpr VkCompareOp toVulkanType(const CompareOp op) noexcept {
+    switch (op) {
+        case CompareOp::NEVER: return VkCompareOp::VK_COMPARE_OP_NEVER;
+        case CompareOp::LESS: return VkCompareOp::VK_COMPARE_OP_LESS;
+        case CompareOp::EQUAL: return VkCompareOp::VK_COMPARE_OP_EQUAL;
+        case CompareOp::LESS_OR_EQUAL: return VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
+        case CompareOp::GREATER: return VkCompareOp::VK_COMPARE_OP_GREATER;
+        case CompareOp::NOT_EQUAL: return VkCompareOp::VK_COMPARE_OP_NOT_EQUAL;
+        case CompareOp::GREATER_OR_EQUAL: return VkCompareOp::VK_COMPARE_OP_GREATER_OR_EQUAL;
+        case CompareOp::ALWAYS: return VkCompareOp::VK_COMPARE_OP_ALWAYS;
+    }
+    return VkCompareOp::VK_COMPARE_OP_NEVER;
+}
+
+constexpr VkCullModeFlagBits toVulkanType(const CullingMode mode) noexcept {
+    switch (mode) {
+        case sge::CullingMode::NONE: return VkCullModeFlagBits::VK_CULL_MODE_NONE;
+        case sge::CullingMode::FRONT: return VkCullModeFlagBits::VK_CULL_MODE_FRONT_BIT;
+        case sge::CullingMode::BACK: return VkCullModeFlagBits::VK_CULL_MODE_BACK_BIT;
+        case sge::CullingMode::FRONT_AND_BACK: return VkCullModeFlagBits::VK_CULL_MODE_FRONT_AND_BACK;
+    }
+    return VkCullModeFlagBits::VK_CULL_MODE_NONE;
+}
+
+constexpr VkFrontFace toVulkanType(const FrontFace face) noexcept {
+    switch (face) {
+        case sge::FrontFace::COUNTER_CLOCKWISE: return VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        case sge::FrontFace::CLOCKWISE: return VkFrontFace::VK_FRONT_FACE_CLOCKWISE;
+    }
+    return VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
+}
+
 PipelineInputData::VertexData::VertexData(
     const std::vector<VkVertexInputBindingDescription>& bindingDescriptions,
     const std::vector<VkVertexInputAttributeDescription>& attributeDescriptions)
@@ -42,13 +75,31 @@ void PipelineInputData::FixedFunctionsStages::setCullingData(VkCullModeFlags cul
     m_frontFace = frontFace;
 }
 
+void PipelineInputData::FixedFunctionsStages::setCullingData(CullingMode cullMode, FrontFace frontFace) noexcept {
+    m_cullMode = toVulkanType(cullMode);
+    m_frontFace = toVulkanType(frontFace);
+}
+
 void PipelineInputData::FixedFunctionsStages::setDepthData(VkBool32 depthTestEnable, VkCompareOp depthCompareOp,
-                                                           VkBool32 depthWriteEnable = VK_TRUE,
-                                                           VkBool32 boundsTestEnable = VK_FALSE,
-                                                           float minDepthBounds = 0.f,
-                                                           float maxDepthBounds = 1.f) noexcept {
+                                                           VkBool32 depthWriteEnable,
+                                                           VkBool32 boundsTestEnable,
+                                                           float minDepthBounds,
+                                                           float maxDepthBounds) noexcept {
     m_depthTestEnable = depthTestEnable;
     m_depthCompareOp = depthCompareOp;
+    m_depthWriteEnable = depthWriteEnable;
+    m_depthBoundsTestEnable = boundsTestEnable;
+    m_minDepthBounds = minDepthBounds;
+    m_maxDepthBounds = maxDepthBounds;
+}
+
+void PipelineInputData::FixedFunctionsStages::setDepthData(bool depthTestEnable, CompareOp depthCompareOp,
+                                                           bool depthWriteEnable,
+                                                           bool boundsTestEnable,
+                                                           float minDepthBounds,
+                                                           float maxDepthBounds) noexcept {
+    m_depthTestEnable = depthTestEnable;
+    m_depthCompareOp = toVulkanType(depthCompareOp);
     m_depthWriteEnable = depthWriteEnable;
     m_depthBoundsTestEnable = boundsTestEnable;
     m_minDepthBounds = minDepthBounds;

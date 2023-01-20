@@ -51,8 +51,11 @@ class PipelineInputData final {
         void setTopology(VkPrimitiveTopology topology) noexcept;
         void setPolygonMode(VkPolygonMode polygonMode) noexcept;
         void setCullingData(VkCullModeFlags cullMode, VkFrontFace frontFace) noexcept;
-        void setDepthData(VkBool32 depthTestEnable, VkCompareOp depthCompareOp, VkBool32 depthWriteEnable,
-                          VkBool32 boundsTestEnable, float minDepthBounds, float maxDepthBounds) noexcept;
+        void setCullingData(CullingMode cullMode, FrontFace frontFace) noexcept;
+        void setDepthData(VkBool32 depthTestEnable, VkCompareOp depthCompareOp, VkBool32 depthWriteEnable = VK_TRUE,
+                          VkBool32 boundsTestEnable = VK_FALSE, float minDepthBounds = 0.f, float maxDepthBounds = 1.f) noexcept;
+        void setDepthData(bool depthTestEnable, CompareOp depthCompareOp, bool depthWriteEnable = true,
+                          bool boundsTestEnable = false, float minDepthBounds = 0.f, float maxDepthBounds = 1.f) noexcept;
 
      private:
         float m_width, m_height;
@@ -117,6 +120,7 @@ class PipelineInputData final {
     const ColorBlendData& getColorBlendData() { return m_colorBlendData; }
     const VkPipelineLayout getPipelineLayout() { return m_pipelineLayout; }
     const VkRenderPass getRenderPass() { return m_renderPass; }
+    void setRenderPass(const VkRenderPass renderPass) noexcept { m_renderPass = renderPass; }
     const uint32_t getSubpass() { return m_subpass; }
 
  private:

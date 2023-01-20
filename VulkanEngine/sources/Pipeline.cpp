@@ -7,38 +7,7 @@
 #include <cassert>
 
 namespace sge {
-/*
-constexpr VkCompareOp toVulkanCompareOp(const CompareOp op) noexcept {
-    switch (op) {
-        case CompareOp::NEVER: return VkCompareOp::VK_COMPARE_OP_NEVER;
-        case CompareOp::LESS: return VkCompareOp::VK_COMPARE_OP_LESS;
-        case CompareOp::EQUAL: return VkCompareOp::VK_COMPARE_OP_EQUAL;
-        case CompareOp::LESS_OR_EQUAL: return VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
-        case CompareOp::GREATER: return VkCompareOp::VK_COMPARE_OP_GREATER;
-        case CompareOp::NOT_EQUAL: return VkCompareOp::VK_COMPARE_OP_NOT_EQUAL;
-        case CompareOp::GREATER_OR_EQUAL: return VkCompareOp::VK_COMPARE_OP_GREATER_OR_EQUAL;
-        case CompareOp::ALWAYS: return VkCompareOp::VK_COMPARE_OP_ALWAYS;
-    }
-    return VkCompareOp::VK_COMPARE_OP_NEVER;
-    ;
-}
-constexpr VkCullModeFlagBits toVulkanCullingMode(const CullingMode mode) noexcept {
-    switch (mode) {
-        case sge::CullingMode::NONE: return VkCullModeFlagBits::VK_CULL_MODE_NONE;
-        case sge::CullingMode::FRONT: return VkCullModeFlagBits::VK_CULL_MODE_FRONT_BIT;
-        case sge::CullingMode::BACK: return VkCullModeFlagBits::VK_CULL_MODE_BACK_BIT;
-        case sge::CullingMode::FRONT_AND_BACK: return VkCullModeFlagBits::VK_CULL_MODE_FRONT_AND_BACK;
-    }
-    return VkCullModeFlagBits::VK_CULL_MODE_NONE;
-}
-constexpr VkFrontFace toVulkanFrontFace(const FrontFace face) noexcept {
-    switch (face) {
-        case sge::FrontFace::COUNTER_CLOCKWISE: return VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
-        case sge::FrontFace::CLOCKWISE: return VkFrontFace::VK_FRONT_FACE_CLOCKWISE;
-    }
-    return VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
-}
-*/
+
 const Shader& Pipeline::getShader() noexcept { return m_pipelineData.getShader(); }
 
 void Pipeline::crateGraphicsPipeline() {
@@ -155,6 +124,13 @@ void Pipeline::crateGraphicsPipeline() {
     depthStencilInfo.front = m_pipelineData.getFixedFunctionsStages().m_stencilFront;
     depthStencilInfo.back = m_pipelineData.getFixedFunctionsStages().m_stencilBack;
 
+    VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+
+    VkPipelineDynamicStateCreateInfo dynamicStateInfo{};
+    dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicStateInfo.dynamicStateCount = 2;
+    dynamicStateInfo.pDynamicStates = dynamicStates;
+
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.stageCount = m_pipelineData.getShader().isGeometryShaderPresent() ? 3 : 2;
@@ -167,7 +143,7 @@ void Pipeline::crateGraphicsPipeline() {
 
     pipelineInfo.pColorBlendState = &colorBlendInfo;
     pipelineInfo.pDepthStencilState = &depthStencilInfo;
-    pipelineInfo.pDynamicState = nullptr;
+    pipelineInfo.pDynamicState = &dynamicStateInfo;
 
     pipelineInfo.layout = m_pipelineData.getPipelineLayout();
     pipelineInfo.renderPass = m_pipelineData.getRenderPass();
@@ -189,57 +165,6 @@ void Pipeline::bind(VkCommandBuffer commandBuffer) const noexcept {
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
 }
 
-/*
-PipelineConfigInfo Pipeline::createDefaultPipeline(uint32_t width, uint32_t height, FixedPipelineStates states) {
-    PipelineConfigInfo configInfo{};
-    configInfo.inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    configInfo.inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
-
-    configInfo.viewport.x = 0.f;
-    configInfo.viewport.y = 0.f;
-    configInfo.viewport.width = static_cast<float>(width);
-    configInfo.viewport.height = static_cast<float>(height);
-    configInfo.viewport.minDepth = 0.f;
-    configInfo.viewport.maxDepth = 1.f;
-
-    configInfo.scissor.offset = {0, 0};
-    configInfo.scissor.extent = {width, height};
-
-    configInfo.rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    configInfo.rasterizationInfo.depthClampEnable = VK_FALSE;
-    configInfo.rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
-    configInfo.rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
-    configInfo.rasterizationInfo.lineWidth = 1.0f;
-    configInfo.rasterizationInfo.cullMode = toVulkanCullingMode(states.cullingMode);
-    configInfo.rasterizationInfo.frontFace = toVulkanFrontFace(states.frontFace);
-    configInfo.rasterizationInfo.depthBiasEnable = VK_FALSE;
-    configInfo.rasterizationInfo.depthBiasConstantFactor = 0.f;
-    configInfo.rasterizationInfo.depthBiasClamp = 0.f;
-    configInfo.rasterizationInfo.depthBiasSlopeFactor = 0.f;
-
-    configInfo.multisampleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    configInfo.multisampleInfo.sampleShadingEnable = VK_FALSE;
-    configInfo.multisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    configInfo.multisampleInfo.minSampleShading = 1.0f;
-    configInfo.multisampleInfo.pSampleMask = nullptr;
-    configInfo.multisampleInfo.alphaToCoverageEnable = VK_FALSE;
-    configInfo.multisampleInfo.alphaToOneEnable = VK_FALSE;
-
-    configInfo.depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    configInfo.depthStencilInfo.depthTestEnable = VK_TRUE;
-    configInfo.depthStencilInfo.depthWriteEnable = states.depthWriteEnable;
-    configInfo.depthStencilInfo.depthCompareOp = toVulkanCompareOp(states.depthOp);
-    configInfo.depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
-    configInfo.depthStencilInfo.minDepthBounds = 0.f;
-    configInfo.depthStencilInfo.maxDepthBounds = 1.f;
-    configInfo.depthStencilInfo.stencilTestEnable = VK_FALSE;
-    configInfo.depthStencilInfo.front = {};
-    configInfo.depthStencilInfo.back = {};
-    configInfo.userDefinedStates = states;
-    return configInfo;
-}
-*/
 std::vector<VkPipelineColorBlendAttachmentState> Pipeline::createDefaultColorAttachments() {
     std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachment(2);
     colorBlendAttachment[0].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
@@ -278,7 +203,8 @@ const VkPipelineLayout Pipeline::createPipeLineLayout(const VkDevice device, VkD
     return pipelineLayout;
 }
 
-bool Pipeline::recreatePipelineShaders() {
+bool Pipeline::recreatePipelineShaders(const VkRenderPass renderPass) {
+    m_pipelineData.setRenderPass(renderPass);
     Shader newShader(m_pipelineData.getShader().getVertexShaderPath(),
                      m_pipelineData.getShader().getFragmentShaderPath(),
                      m_pipelineData.getShader().getGeometryShaderPath(), m_pipelineData.getShader().getDefines());
@@ -287,7 +213,7 @@ bool Pipeline::recreatePipelineShaders() {
         VK_CHECK_RESULT(vkDeviceWaitIdle(m_device.device()), "Failed to wait idle during recreationg pipeline shaders");
         vkDestroyPipeline(m_device.device(), m_graphicsPipeline, nullptr);
         crateGraphicsPipeline();
-    } else {
+      } else {
         LOG_ERROR("Can't recreate shaders in pipeline! Used last suitable shader")
         return false;
     }

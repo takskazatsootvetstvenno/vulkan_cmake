@@ -70,6 +70,20 @@ void App::renderObjects(VkCommandBuffer commandBuffer) noexcept {
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 mgr.m_pipelines[mesh.getPipelineId()].pipelineLayout, 0, 1,
                                 &mgr.m_sets[mesh.getDescriptorSetId()].set, 0, nullptr);
+        VkViewport viewPort;
+        viewPort.x = 0.f;
+        viewPort.y = 0.f;
+        viewPort.width = m_window.getExtent().width;
+        viewPort.height = m_window.getExtent().height;
+        viewPort.minDepth = 0.f;
+        viewPort.maxDepth = 1.f;
+        vkCmdSetViewport(commandBuffer, 0, 1, &viewPort);
+
+        VkRect2D scissor;
+        scissor.offset = {0, 0};
+        scissor.extent = {m_window.getExtent()};
+
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
         m_model->bind(commandBuffer, mesh);
         m_model->draw(commandBuffer, mesh);
@@ -274,7 +288,7 @@ void App::run() {
                 if (ImGui::TreeNode(pipeline.name.c_str())) {
                     const auto& shader = pipeline.pipeline->getShader();
                     ImGui::Separator();
-                    if (ImGui::Button("Recreate pipeline")) pipeline.pipeline->recreatePipelineShaders();
+                    if (ImGui::Button("Recreate pipeline")) pipeline.pipeline->recreatePipelineShaders(m_renderer.getSwapChainRenderPass());
                     ImGui::Separator();
                     ImGui::Text("%s", std::string("Vertex shader path:\n" + shader.getVertexShaderPath()).c_str());
                     ImGui::Text("%s", std::string("Fragment shader path:\n" + shader.getFragmentShaderPath()).c_str());
@@ -337,8 +351,8 @@ void App::run() {
             m_renderer.endSwapChainRenderPass(commandBuffer);
             if (m_renderer.endFrame() == true)
                 for (auto& pipeline : mgr.m_pipelines) {
-                    Shader prevShader = pipeline.pipeline->getShader();
-                    createPipeline(pipeline.pipelineLayout, pipeline.pipeline, std::move(prevShader));
+                    //Shader prevShader = pipeline.pipeline->getShader();
+                    //createPipeline(pipeline.pipelineLayout, pipeline.pipeline, std::move(prevShader));
                 }
         }
     }
@@ -609,6 +623,8 @@ void App::createPipeline(const VkDescriptorSetLayout descriptorSetLayout, std::u
     PipelineInputData::ColorBlendData colorBlendData(Pipeline::createDefaultColorAttachments());
     auto pipelineLayout = Pipeline::createPipeLineLayout(m_device.device(), descriptorSetLayout);
     PipelineInputData::FixedFunctionsStages fixedFunctionStages(m_window.getExtent().width, m_window.getExtent().height);
+    fixedFunctionStages.setCullingData(states.cullingMode, states.frontFace);
+    fixedFunctionStages.setDepthData(states.depthTestEnable, states.depthOp, states.depthWriteEnable, false);
     auto renderPass = m_renderer.getSwapChainRenderPass();
 
     PipelineInputData pipeline_data {
@@ -627,10 +643,18 @@ void App::createPipeline(const VkPipelineLayout pipelineLayout, std::unique_ptr<
     PipelineInputData::VertexData vertexData(Vertex::getBindingDescription(), Vertex::getAttributeDescription());
     PipelineInputData::ColorBlendData colorBlendData(Pipeline::createDefaultColorAttachments());
     PipelineInputData::FixedFunctionsStages fixedFunctionStages(m_window.getExtent().width, m_window.getExtent().height);
+    fixedFunctionStages.setCullingData(states.cullingMode, states.frontFace);
+    fixedFunctionStages.setDepthData(states.depthTestEnable, states.depthOp, states.depthWriteEnable, false);
     auto renderPass = m_renderer.getSwapChainRenderPass();
 
-    PipelineInputData pipeline_data{vertexData,          shader,    colorBlendData, pipelineLayout,
-                                    fixedFunctionStages, renderPass};
+    PipelineInputData pipeline_data {
+        vertexData,
+        shader,
+        colorBlendData,
+        pipelineLayout,
+        fixedFunctionStages,
+        renderPass
+    };
     pipeline = std::make_unique<Pipeline>(m_device, std::move(pipeline_data));
 }
 
