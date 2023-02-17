@@ -18,7 +18,7 @@ namespace sge {
 		bool endFrame() noexcept;
 		uint32_t getCurrentImageIndex() const noexcept;
 		int getFrameIndex() const noexcept;
-		void beginSwapChainRenderPass(VkCommandBuffer commandBuffer) noexcept;
+        void beginSwapChainRenderPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer) noexcept;
 		void endSwapChainRenderPass(VkCommandBuffer commandBuffer) noexcept;
 
 	private:

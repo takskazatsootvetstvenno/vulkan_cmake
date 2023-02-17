@@ -154,6 +154,13 @@ int main(int argc, char* argv[]) {
         _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #    endif
 #endif  // _DEBUG
+        try {
+            std::locale::global(std::locale("en_US.UTF-8"));
+        } catch (const std::exception& e) {
+            LOG_ERROR("Error with setting global locale (en_US.UTF-8)!\n" << e.what());
+        }
+        std::locale loc;
+        LOG_MSG("Used locale: " << loc.name());
 
         sge::App my_app({1280, 720}, "Vulkan engine");
 

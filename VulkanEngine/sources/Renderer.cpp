@@ -3,6 +3,7 @@
 #include "GLFW/glfw3.h"
 #include "Logger.h"
 #include "VulkanHelpUtils.h"
+#include "ResourceSystem.h"
 
 #include <array>
 #include <cassert>
@@ -13,8 +14,6 @@ Renderer::Renderer(Window& window, Device& device) : m_window(window), m_device(
     recreateSwapChain();
     createCommandBuffers();
 }
-
-PFN_vkSetDebugUtilsObjectNameEXT SetDebugUtilsObjectNameEXT;
 
 Renderer::~Renderer() { freeCommandBuffers(); }
 
@@ -46,22 +45,9 @@ void Renderer::createCommandBuffers() {
     auto result = vkAllocateCommandBuffers(m_device.device(), &allocInfo, m_commandBuffers.data());
     VK_CHECK_RESULT(result, "Failed to allocate command buffers!")
     if (m_device.isEnableValidationLayers()) {
-        SetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(
-            m_device.getInstance(), "vkSetDebugUtilsObjectNameEXT");
-        if (SetDebugUtilsObjectNameEXT == nullptr) {
-            LOG_ERROR("Can't load SetDebugUtilsObjectNameEXT!")
-            return;
-        }
         for (size_t i = 0; i < m_commandBuffers.size(); ++i) {
             std::string temp = "CB_" + std::to_string(i);
-            VkDebugUtilsObjectNameInfoEXT cmd_buf = {
-                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-                .pNext = nullptr,
-                .objectType = VK_OBJECT_TYPE_COMMAND_BUFFER,
-                .objectHandle = reinterpret_cast<uint64_t>(m_commandBuffers[i]),
-                .pObjectName = temp.c_str(),
-            };
-            SetDebugUtilsObjectNameEXT(m_device.device(), &cmd_buf);
+            m_device.setObjectName(VK_OBJECT_TYPE_COMMAND_BUFFER, reinterpret_cast<uint64_t>(m_commandBuffers[i]), temp.data());
         }
     }
 }
@@ -114,16 +100,29 @@ bool Renderer::endFrame() noexcept {
 
 uint32_t Renderer::getCurrentImageIndex() const noexcept { return m_currentImageIndex; }
 
-void Renderer::beginSwapChainRenderPass(VkCommandBuffer commandBuffer) noexcept {
+void Renderer::beginSwapChainRenderPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer frameBuffer) noexcept {
     assert(m_isFrameStarted && "Can't call beginSwapChainRenderPass if frame is not in progress");
     assert(commandBuffer == getCurrentCommandBuffer() &&
            "Can't begin render pass on command buffer from a different frame");
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = m_swapChain->getRenderPass();
-    renderPassInfo.framebuffer = m_swapChain->getFrameBuffer(m_currentImageIndex);
+   
 
+    /* if (n == 1)
+        renderPassInfo.framebuffer = m_swapChain->getFrameBuffer(m_currentImageIndex);
+    else
+        renderPassInfo.framebuffer = resourceSystem.getFrameBufferByID(n).getFrameBuffer();
+        */
+    static uint64_t temp = 0;
+    if (temp % 3 != 2) {
+        renderPassInfo.renderPass = renderPass;
+        renderPassInfo.framebuffer = frameBuffer;
+    } else {
+        renderPassInfo.renderPass = m_swapChain->getRenderPass();
+        renderPassInfo.framebuffer = m_swapChain->getFrameBuffer(m_currentImageIndex);
+    }
+    ++temp;
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = m_swapChain->getSwapChainExtent();
     std::array<VkClearValue, 2> clearValues{};

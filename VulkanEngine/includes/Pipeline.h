@@ -27,8 +27,8 @@ class Pipeline {
     Pipeline(Device& device, PipelineInputData&& pipelineData);
     Pipeline(const Pipeline&) = delete;
     Pipeline& operator=(const Pipeline&) = delete;
-    Pipeline(Pipeline&&) = delete;
-    Pipeline& operator=(Pipeline&&) = delete;
+    Pipeline& operator=(Pipeline&& other) = delete;
+    Pipeline(Pipeline&& other) noexcept;
     ~Pipeline();
 
     const Shader& getShader() noexcept;

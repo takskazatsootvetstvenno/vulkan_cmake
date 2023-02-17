@@ -57,8 +57,8 @@ void Pipeline::crateGraphicsPipeline() {
     }
     VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo, geometryShaderStageInfo};
 
-    auto bindingsDescriptions = Vertex::getBindingDescription();
-    auto attributeDescriptions = Vertex::getAttributeDescription();
+    auto& bindingsDescriptions = m_pipelineData.getVertexData().m_bindingsDescriptions;
+    auto& attributeDescriptions = m_pipelineData.getVertexData().m_attributeDescriptions;
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -189,7 +189,7 @@ std::vector<VkPipelineColorBlendAttachmentState> Pipeline::createDefaultColorAtt
     return colorBlendAttachment;
 }
 
-const VkPipelineLayout Pipeline::createPipeLineLayout(const VkDevice device, VkDescriptorSetLayout setLayout) {
+/*static*/ const VkPipelineLayout Pipeline::createPipeLineLayout(const VkDevice device, VkDescriptorSetLayout setLayout) {
     VkPipelineLayout pipelineLayout;
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts{setLayout};
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
@@ -237,5 +237,14 @@ Pipeline::Pipeline(Device& device, const PipelineInputData& pipelineData)
 Pipeline::Pipeline(Device& device, PipelineInputData&& pipelineData) : m_device(device), m_pipelineData(std::move(pipelineData)) {
     crateGraphicsPipeline();
 }
-Pipeline::~Pipeline() { vkDestroyPipeline(m_device.device(), m_graphicsPipeline, nullptr); }
+Pipeline::Pipeline(Pipeline&& other) noexcept
+:m_device(other.m_device),
+m_graphicsPipeline(std::move(other.m_graphicsPipeline)), 
+m_pipelineData(std::move(other.m_pipelineData)) 
+{
+    other.m_graphicsPipeline = nullptr;
+}
+Pipeline::~Pipeline() {
+    vkDestroyPipeline(m_device.device(), m_graphicsPipeline, nullptr); 
+}
 }  // namespace sge

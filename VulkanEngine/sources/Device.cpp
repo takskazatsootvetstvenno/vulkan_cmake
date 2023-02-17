@@ -16,6 +16,7 @@
 #endif
 
 namespace sge {
+PFN_vkSetDebugUtilsObjectNameEXT SetDebugUtilsObjectNameEXT;
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                                                     VkDebugUtilsMessageTypeFlagsEXT messageType,
                                                     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
@@ -223,6 +224,18 @@ void Device::createLogicalDevice() {
 }
 
 const VkPhysicalDeviceProperties& Device::getPhysicalDeviceProperties() const noexcept { return m_physicalProperties; }
+
+void Device::setObjectName(const VkObjectType objectType, const uint64_t objectHandle, const char* name) const {
+    if (SetDebugUtilsObjectNameEXT == nullptr) return;
+    VkDebugUtilsObjectNameInfoEXT objectInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+        .pNext = nullptr,
+        .objectType = objectType,
+        .objectHandle = objectHandle,
+        .pObjectName = name,
+    };
+    VK_CHECK_RESULT(SetDebugUtilsObjectNameEXT(m_device, &objectInfo), "Failed to add DebugUtilsObjectNameInfoEXT to object!");
+}
 
 SwapChainSupportDetails Device::getSwapChainSupport() const { return querySwapChainSupport(m_physicalDevice); }
 
@@ -602,5 +615,11 @@ void Device::setupDebugMessenger() {
     createInfo.pUserData = nullptr;
     auto result = CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debugMessenger);
     VK_CHECK_RESULT(result, "Failed to set up debug messenger!")
+    SetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(
+        m_instance, "vkSetDebugUtilsObjectNameEXT");
+    if (SetDebugUtilsObjectNameEXT == nullptr) {
+        LOG_ERROR("Can't load SetDebugUtilsObjectNameEXT!")
+    }
+
 }
 }  // namespace sge

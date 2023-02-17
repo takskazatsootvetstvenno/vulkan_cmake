@@ -9,6 +9,8 @@
 #include "Shader.h"
 #include "Texture.h"
 #include "VulkanHelpUtils.h"
+#include "RenderSystem.h"
+#include "ResourceSystem.h"
 
 #include <array>
 #include <chrono>
@@ -18,8 +20,201 @@
 #include <vector>
 
 namespace sge {
+
+    
+void App::initPipelines() {
+    RenderSystem::Instance();
+    auto& resourceSystem = ResourceSystem::Instance();
+    auto& mgr = MeshMGR::Instance();
+
+    resourceSystem.init(&m_device);
+
+    auto depthFormat = m_device.findSupportedFormat(
+        {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT}, VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+    VkSampler inNegativesampler;
+    VkSamplerCreateInfo samplerInfo{};
+        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerInfo.maxAnisotropy = 1.0f;
+        samplerInfo.magFilter = VK_FILTER_NEAREST;
+        samplerInfo.minFilter = VK_FILTER_NEAREST;
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        samplerInfo.addressModeV = samplerInfo.addressModeU;
+        samplerInfo.addressModeW = samplerInfo.addressModeU;
+        samplerInfo.mipLodBias = 0.0f;
+        samplerInfo.maxAnisotropy = 1.0f;
+        samplerInfo.minLod = 0.0f;
+        samplerInfo.maxLod = 1.0f;
+        samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+        VK_CHECK_RESULT(vkCreateSampler(m_device.device(), &samplerInfo, nullptr, &inNegativesampler),
+                        "Can't create sampler!");
+
+    WorkFlow simple_workflow("Simple_workflow");
+    { //For Pipeline 0 - Process meshes (Phong shaders)
+        auto descriptorLayoutBuilder = DescriptorSetLayout::Builder(m_device)
+                                           .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+                                           .addBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                                                       VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+        auto descriptorLayout = descriptorLayoutBuilder.build();
+
+        auto uboBuffer = std::make_unique<Buffer>(m_device, sizeof(PBRUbo), 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        uboBuffer->map();
+
+        auto globalBufferInfo = mgr.m_generalMatrixUBO->descriptorInfo();
+        auto bufferInfo = uboBuffer->descriptorInfo();
+
+        auto DW = DescriptorWriter(*descriptorLayout, mgr.getDescriptorPool())
+                      .writeBuffer(0, &globalBufferInfo)
+                      .writeBuffer(1, &bufferInfo);
+
+        VkDescriptorSet descriptorSet;
+        DW.build(descriptorSet);
+
+        PBRUbo ubo = {.modelMatrix = glm::mat4{38.f},
+                      .normalMatrix = glm::mat4{38.f},
+                      .baseColor = glm::vec4(1.f, 0.f, 1.f, 1.f),
+                      .lightDirection = glm::vec4(1.f, 0.f, 0.f, 0.f),
+                      .metallic = 0.5f,
+                      .roughness = 0.5f};
+
+        uboBuffer->writeToBuffer(&ubo);
+        uboBuffer->flush();
+        
+        resourceSystem.addConstantBuffer(std::move(uboBuffer));
+
+        FrameBuffer firstFB(m_device, m_window.getExtent().width, m_window.getExtent().height);
+        firstFB.createAttachment(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+        firstFB.createAttachment(depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, true);
+        firstFB.create();
+
+        auto framebufferID = resourceSystem.addFramebuffer(std::move(firstFB));
+        auto renderPass = resourceSystem.getFrameBufferByID(framebufferID).getRenderPass();
+
+        PipelineInputData::VertexData vertexData(Vertex::getBindingDescription(), Vertex::getAttributeDescription());
+        PipelineInputData::ColorBlendData colorBlendData(Pipeline::createDefaultColorAttachments());
+        auto pipelineLayout = Pipeline::createPipeLineLayout(m_device.device(), descriptorLayout->getDescriptorSetLayout());
+        PipelineInputData::FixedFunctionsStages fixedFunctionStages(m_window.getExtent().width,
+                                                                    m_window.getExtent().height);
+
+        fixedFunctionStages.setCullingData(CullingMode::FRONT, FrontFace::CLOCKWISE);
+        fixedFunctionStages.setDepthData(true, CompareOp::LESS, true, false);
+        Shader glslPhongShader("data/Shaders/GLSL/Phong/phong.vert", "data/Shaders/GLSL/Phong/phong.frag");
+
+        PipelineInputData pipeline_data{
+            vertexData,    
+            glslPhongShader,
+            colorBlendData,
+            pipelineLayout,
+            fixedFunctionStages, 
+            renderPass
+        };
+
+        auto descriptorID = resourceSystem.addDescriptor({.layout = std::move(descriptorLayout), .set = descriptorSet});
+
+        auto pipelineID = resourceSystem.addPipeline({
+            .name = "Phong first stage pipeline",
+            .pipelineLayout = pipelineLayout,
+            .pipeline = Pipeline(m_device, std::move(pipeline_data)),
+            .descriptorID = descriptorID,
+            .framebufferID = framebufferID
+        });
+        simple_workflow.addNextFrame(pipelineID, 0, 0, true, true); //check VB/IB
+    }
+    { //For Pipeline 1 - Negative screen
+        FrameBuffer finalFB(m_device, m_window.getExtent().width, m_window.getExtent().height);
+        finalFB.createAttachment(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, false);
+        finalFB.create();
+        auto framebufferID = resourceSystem.addFramebuffer(std::move(finalFB));
+        auto renderPass = resourceSystem.getFrameBufferByID(framebufferID).getRenderPass();
+
+        auto descriptorLayoutBuilder = DescriptorSetLayout::Builder(m_device).addBinding(
+            0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+                                           
+        auto descriptorLayout = descriptorLayoutBuilder.build();
+        VkDescriptorImageInfo descriptorImage{
+            .sampler = inNegativesampler,
+            .imageView = resourceSystem.getFrameBufferByID(0).getFrameBufferAttachmentByID(0).view,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+
+        auto DW = DescriptorWriter(*descriptorLayout, mgr.getDescriptorPool()).writeImage(0, &descriptorImage);
+        VkDescriptorSet descriptorSet;
+        DW.build(descriptorSet);
+
+        PipelineInputData::VertexData vertexData({}, {});
+        PipelineInputData::ColorBlendData colorBlendData(Pipeline::createDefaultColorAttachments());
+        auto pipelineLayout = Pipeline::createPipeLineLayout(m_device.device(),
+                                                             descriptorLayout->getDescriptorSetLayout());
+        PipelineInputData::FixedFunctionsStages fixedFunctionStages(m_window.getExtent().width,
+                                                                    m_window.getExtent().height);
+
+        fixedFunctionStages.setCullingData(CullingMode::NONE, FrontFace::CLOCKWISE);
+        fixedFunctionStages.setDepthData(false, CompareOp::LESS, false, false);
+        Shader glslNegativeShader("data/Shaders/GLSL/Negative/Negative.vert", "data/Shaders/GLSL/Negative/Negative.frag");
+
+        PipelineInputData pipeline_data{
+            vertexData,     glslNegativeShader,  colorBlendData,
+            pipelineLayout, fixedFunctionStages, renderPass};
+
+        auto descriptorID = resourceSystem.addDescriptor({.layout = std::move(descriptorLayout), .set = descriptorSet});
+
+        auto pipelineID = resourceSystem.addPipeline(
+            {
+                .name = "Negative second stage pipeline",
+                .pipelineLayout = pipelineLayout,
+                .pipeline = Pipeline(m_device, std::move(pipeline_data)),
+                .descriptorID = descriptorID,
+                .framebufferID = framebufferID
+           });
+        simple_workflow.addNextFrame(pipelineID, 0, 0, false, false);  // TO DO check VB/IB
+    }
+    { //Swapchain stage
+        auto descriptorLayoutBuilder = DescriptorSetLayout::Builder(m_device).addBinding(
+            0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+
+        auto descriptorLayout = descriptorLayoutBuilder.build();
+        VkDescriptorImageInfo descriptorImage{
+            .sampler = inNegativesampler,
+            .imageView = resourceSystem.getFrameBufferByID(1).getFrameBufferAttachmentByID(0).view,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+
+        auto DW = DescriptorWriter(*descriptorLayout, mgr.getDescriptorPool()).writeImage(0, &descriptorImage);
+        VkDescriptorSet descriptorSet;
+        DW.build(descriptorSet);
+
+        PipelineInputData::VertexData vertexData({}, {});
+        PipelineInputData::ColorBlendData colorBlendData(Pipeline::createDefaultColorAttachments());
+        auto pipelineLayout = Pipeline::createPipeLineLayout(m_device.device(),
+                                                             descriptorLayout->getDescriptorSetLayout());
+        PipelineInputData::FixedFunctionsStages fixedFunctionStages(m_window.getExtent().width,
+                                                                    m_window.getExtent().height);
+
+        fixedFunctionStages.setCullingData(CullingMode::NONE, FrontFace::CLOCKWISE);
+        fixedFunctionStages.setDepthData(false, CompareOp::LESS, false, false);
+        Shader glslFullscreenShader("data/Shaders/GLSL/Fullscreen/Fullscreen.vert",
+                                  "data/Shaders/GLSL/Fullscreen/Fullscreen.frag");
+
+        auto renderPass = m_renderer.getSwapChainRenderPass();
+        PipelineInputData pipeline_data{vertexData,     glslFullscreenShader, colorBlendData,
+                                        pipelineLayout, fixedFunctionStages, renderPass};
+
+        auto descriptorID = resourceSystem.addDescriptor({.layout = std::move(descriptorLayout), .set = descriptorSet});
+
+        auto pipelineID = resourceSystem.addPipeline({.name = "Swapchain stage",
+                                                      .pipelineLayout = pipelineLayout,
+                                                      .pipeline = Pipeline(m_device, std::move(pipeline_data)),
+                                                      .descriptorID = descriptorID,
+                                                      .framebufferID = 0});
+        simple_workflow.addNextFrame(pipelineID, 0, 0, false, false);  // TO DO check VB/IB
+    }
+    resourceSystem.addWorkFlow(std::move(simple_workflow));
+}
+
 App::App(glm::ivec2 windowSize, std::string windowName) : m_window(windowSize.x, windowSize.y, std::move(windowName)) {
     initEvents();
+
+
     m_camera.setViewCircleCamera(-15.f, 5.f);
     m_camera.setPerspectiveProjection(glm::radians(m_camera.getZoom()), static_cast<float>(windowSize.x) / windowSize.y,
                                       0.1f, 256.f);
@@ -41,6 +236,9 @@ App::App(glm::ivec2 windowSize, std::string windowName) : m_window(windowSize.x,
         m_device, sizeof(NormalTestInfo), 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     mgr.m_normalTestUBO->map();
     m_model = std::make_unique<Model>(m_device);
+
+    initPipelines();
+
     addSkybox();
     addNormalTestPipeline();
     auto brdfLUT = mgr.m_textures.try_emplace("brdfLUT", "data/brdfLUT.png");
@@ -49,9 +247,9 @@ App::App(glm::ivec2 windowSize, std::string windowName) : m_window(windowSize.x,
 
 App::~App() {
     auto& mgr = MeshMGR::Instance();
-    for (auto& pipeline : mgr.m_pipelines) {
+    for (auto& pipeline : mgr.m_pipelines) 
         vkDestroyPipelineLayout(m_device.device(), pipeline.pipelineLayout, nullptr);
-    }
+    
     for (auto& textures : mgr.m_textures) {
         vkDestroyImage(m_device.device(), textures.second.getTextureImage(), nullptr);
         vkFreeMemory(m_device.device(), textures.second.getTextureImageMemory(), nullptr);
@@ -61,11 +259,40 @@ App::~App() {
     mgr.clearTable();
 }
 
-void App::renderObjects(VkCommandBuffer commandBuffer) noexcept {
+void App::renderObjects(VkCommandBuffer commandBuffer, uint32_t pipelineID, bool hasVertexInput) noexcept {
     auto& mgr = MeshMGR::Instance();
+    auto& resourceSystem = ResourceSystem::Instance();
 
-    for (auto& mesh : mgr.m_meshes) {
+    auto& pipeline1 = resourceSystem.getPipeline(pipelineID);
+    pipeline1.pipeline.bind(commandBuffer);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline1.pipelineLayout, 0, 1,
+                            &resourceSystem.getDescriptor(pipeline1.descriptorID).set, 0, nullptr);
+    VkViewport viewPort;
+    viewPort.x = 0.f;
+    viewPort.y = 0.f;
+    viewPort.width = m_window.getExtent().width;
+    viewPort.height = m_window.getExtent().height;
+    viewPort.minDepth = 0.f;
+    viewPort.maxDepth = 1.f;
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewPort);
+
+    VkRect2D scissor;
+    scissor.offset = {0, 0};
+    scissor.extent = {m_window.getExtent()};
+
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+    if (hasVertexInput == true) {
+        for (auto& mesh : mgr.m_meshes) {
+            m_model->bind(commandBuffer, mesh);
+            m_model->draw(commandBuffer, mesh);
+        }
+    } else {
+        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+    }
+    /*for (auto& mesh : mgr.m_meshes) {
         mgr.m_pipelines[mesh.getPipelineId()].pipeline->bind(commandBuffer);
+
 
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 mgr.m_pipelines[mesh.getPipelineId()].pipelineLayout, 0, 1,
@@ -113,6 +340,7 @@ void App::renderObjects(VkCommandBuffer commandBuffer) noexcept {
         m_model->bind(commandBuffer, systemMesh);
         m_model->draw(commandBuffer, systemMesh);
     }
+    */
 }
 
 void App::initEvents() noexcept {
@@ -182,7 +410,7 @@ void App::addNormalTestPipeline() noexcept {
     if (Shader glslNormalShader("data/Shaders/GLSL/Normal/normal.vert", "data/Shaders/GLSL/Normal/normal.frag",
                                 "data/Shaders/GLSL/Normal/normal.geom");
         glslNormalShader.isValid()) {
-        auto pipelineLayoutSkybox = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
+        auto pipelineLayoutSkybox = Pipeline::createPipeLineLayout(m_device.device(), descriptorLayout->getDescriptorSetLayout());
         m_normalPipelineID = mgr.m_pipelines.size();
         mgr.m_pipelines.emplace_back(std::to_string(m_normalPipelineID) + " Normal_test", pipelineLayoutSkybox, nullptr);
         FixedPipelineStates states{.cullingMode = CullingMode::NONE};
@@ -244,7 +472,7 @@ void App::addSkybox() noexcept {
 
     if (Shader glslSkyboxShader("data/Shaders/GLSL/Skybox/skybox.vert", "data/Shaders/GLSL/Skybox/skybox.frag");
         glslSkyboxShader.isValid()) {
-        auto pipelineLayoutSkybox = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
+        auto pipelineLayoutSkybox = Pipeline::createPipeLineLayout(m_device.device(), descriptorLayout->getDescriptorSetLayout());
         mgr.m_pipelines.emplace_back(std::to_string(mgr.m_pipelines.size()) + " skybox_GLSL", pipelineLayoutSkybox,
                                      nullptr);
         FixedPipelineStates states{.depthWriteEnable = false, .depthOp = CompareOp::LESS_OR_EQUAL};
@@ -344,11 +572,29 @@ void App::run() {
             mgr.m_debugUBO->writeToBuffer(&debugUBO);
             mgr.m_debugUBO->flush();
 
+            
             // render
-            m_renderer.beginSwapChainRenderPass(commandBuffer);
-            renderObjects(commandBuffer);
-            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+            auto& resourceSystem = ResourceSystem::Instance();
+            ;
+            //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+            for (auto& currentWorkflowframe : resourceSystem.getWorkFlow(0).getFramesData()) {
+                auto& pipeline = resourceSystem.getPipeline(currentWorkflowframe.pipelineID);
+                auto renderPass = resourceSystem.getFrameBufferByID(pipeline.framebufferID).getRenderPass();
+                auto frameBuffer = resourceSystem.getFrameBufferByID(pipeline.framebufferID).getFrameBuffer();
+
+                m_renderer.beginSwapChainRenderPass(commandBuffer, renderPass, frameBuffer);
+                renderObjects(commandBuffer, currentWorkflowframe.pipelineID, currentWorkflowframe.hasVertexBuffer);
+                m_renderer.endSwapChainRenderPass(commandBuffer);
+            }
+            
+
+            /*
+            //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
             m_renderer.endSwapChainRenderPass(commandBuffer);
+            m_renderer.beginSwapChainRenderPass(commandBuffer, 1);
+            renderObjects(commandBuffer, 1);
+            m_renderer.endSwapChainRenderPass(commandBuffer);
+            */
             if (m_renderer.endFrame() == true)
                 for (auto& pipeline : mgr.m_pipelines) {
                     //Shader prevShader = pipeline.pipeline->getShader();
@@ -360,22 +606,6 @@ void App::run() {
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-}
-
-
-
-const VkPipelineLayout App::createPipeLineLayout(VkDescriptorSetLayout setLayout) noexcept {
-    VkPipelineLayout pipelineLayout;
-    std::vector<VkDescriptorSetLayout> descriptorSetLayouts{setLayout};
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
-    pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges = nullptr;
-    auto result = vkCreatePipelineLayout(m_device.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
-    VK_CHECK_RESULT(result, "Failed to create pipeline layout");
-    return pipelineLayout;
 }
 
 void App::init_imgui() {
@@ -423,6 +653,7 @@ void App::init_imgui() {
     // clear font textures from cpu data
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
+
 
 void App::loadModels(std::vector<Mesh>&& meshess) {
     auto& mgr = MeshMGR::Instance();
@@ -557,7 +788,7 @@ void App::loadModels(std::vector<Mesh>&& meshess) {
                     if (Shader glslPhongShader("data/Shaders/GLSL/Phong/phong.vert",
                                                "data/Shaders/GLSL/Phong/phong.frag", "", {"", defines});
                         glslPhongShader.isValid()) {
-                        auto pipelineLayoutGLSLPhong = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
+                        auto pipelineLayoutGLSLPhong = Pipeline::createPipeLineLayout(m_device.device(), descriptorLayout->getDescriptorSetLayout());
                         mgr.m_pipelines.emplace_back(std::to_string(mgr.m_pipelines.size()) + " Phong_GLSL",
                                                      pipelineLayoutGLSLPhong, nullptr);
                         mesh.m_pipelineId = mgr.m_pipelines.size() - 1;
@@ -572,7 +803,9 @@ void App::loadModels(std::vector<Mesh>&& meshess) {
                     if (Shader glslPBRShader("data/Shaders/GLSL/PBR/PBR.vert", "data/Shaders/GLSL/PBR/PBR.frag", "",
                                              {"", defines});
                         glslPBRShader.isValid()) {
-                        auto pipelineLayoutGLSLPBR = createPipeLineLayout(descriptorLayout->getDescriptorSetLayout());
+                        auto pipelineLayoutGLSLPBR = Pipeline::createPipeLineLayout(
+                            m_device.device(),
+                            descriptorLayout->getDescriptorSetLayout());
                         mgr.m_pipelines.emplace_back(std::to_string(mgr.m_pipelines.size()) + " PBR_GLSL",
                                                      pipelineLayoutGLSLPBR, nullptr);
                         mesh.m_pipelineId = mgr.m_pipelines.size() - 1;

@@ -44,19 +44,18 @@ class App {
 
     void run();
     void loadModels(std::vector<Mesh>&& meshes);
-
  private:
     void createPipeline(const VkPipelineLayout pipelineLayout, std::unique_ptr<Pipeline>& pipeline, Shader&& shader,
                         FixedPipelineStates states = FixedPipelineStates());
 
     void createPipeline(const VkDescriptorSetLayout descriptorSetLayout, std::unique_ptr<Pipeline>& pipeline,
                         Shader&& shader, FixedPipelineStates states = FixedPipelineStates());
-    const VkPipelineLayout createPipeLineLayout(VkDescriptorSetLayout setLayout) noexcept;
-    void renderObjects(VkCommandBuffer commandBuffer) noexcept;
+    void renderObjects(VkCommandBuffer commandBuffer, uint32_t pipelineID, bool hasVertexInput) noexcept;
     void initEvents() noexcept;
     void addSkybox() noexcept;
     void addNormalTestPipeline() noexcept;
     void init_imgui();
+    void initPipelines();
     Window m_window{800, 600, "vulkan_window"};
     Device m_device{m_window};
     Renderer m_renderer{m_window, m_device};

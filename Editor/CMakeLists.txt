@@ -29,6 +29,13 @@ target_link_libraries(${EDITOR_PROJECT_NAME} VulkanEngine)
 
 add_custom_command(TARGET ${EDITOR_PROJECT_NAME}
     POST_BUILD 
+
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Negative/Negative.frag        ${PROJECT_BINARY_DIR}/Editor/data/Shaders/GLSL/Negative/Negative.frag
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Negative/Negative.vert        ${PROJECT_BINARY_DIR}/Editor/data/Shaders/GLSL/Negative/Negative.vert
+
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Fullscreen/Fullscreen.frag        ${PROJECT_BINARY_DIR}/Editor/data/Shaders/GLSL/Fullscreen/Fullscreen.frag
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/Fullscreen/Fullscreen.vert        ${PROJECT_BINARY_DIR}/Editor/data/Shaders/GLSL/Fullscreen/Fullscreen.vert
+
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/PBR/PBR.frag        ${PROJECT_BINARY_DIR}/Editor/data/Shaders/GLSL/PBR/PBR.frag
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/Shaders/GLSL/PBR/PBR.vert        ${PROJECT_BINARY_DIR}/Editor/data/Shaders/GLSL/PBR/PBR.vert
 	

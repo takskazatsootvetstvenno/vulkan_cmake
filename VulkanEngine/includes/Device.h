@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 
 #include <vector>
+
 namespace sge {
 struct QueueFamilyIndices {
     uint32_t graphicsFamily;
@@ -28,6 +29,7 @@ class Device {
     Device(Device&&) = delete;
     Device& operator=(Device&&) = delete;
     const VkPhysicalDeviceProperties& getPhysicalDeviceProperties() const noexcept;
+    void setObjectName(VkObjectType objectType, uint64_t objectHandle, const char* name) const;
     SwapChainSupportDetails getSwapChainSupport() const;
     QueueFamilyIndices findPhysicalQueueFamilies() const;
     VkDevice device() const noexcept;

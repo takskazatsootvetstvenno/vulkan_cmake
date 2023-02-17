@@ -163,12 +163,21 @@ void SwapChain::createSwapChain() {
                     "Failed to get swapchain images");
     m_swapChainImageFormat = surfaceFormat.format;
     m_swapChainExtent = extent;
+
+    for (int i = 0; i < m_swapChainImages.size(); ++i) {
+        std::string str = "SwapchainImage #" + std::to_string(i);
+        m_device.setObjectName(VK_OBJECT_TYPE_IMAGE, reinterpret_cast<uint64_t>(m_swapChainImages[i]), str.c_str());
+    }
 }
 
 void SwapChain::createImageViews() {
     m_swapChainImageViews.resize(m_swapChainImages.size());
-    for (size_t i = 0; i < m_swapChainImages.size(); ++i)
+    for (size_t i = 0; i < m_swapChainImages.size(); ++i) {
         m_swapChainImageViews[i] = m_device.createImageView(m_swapChainImages[i], m_swapChainImageFormat);
+        std::string str = "SwapchainImageView #" + std::to_string(i); 
+        m_device.setObjectName(VK_OBJECT_TYPE_IMAGE_VIEW, reinterpret_cast<uint64_t>(m_swapChainImageViews[i]),
+                               str.c_str());
+    }
 }
 
 void SwapChain::createDepthResources() {
@@ -347,6 +356,8 @@ void SwapChain::createRenderPass() {
 
     auto result = vkCreateRenderPass(m_device.device(), &renderPassInfo, nullptr, &m_renderPass);
     VK_CHECK_RESULT(result, "Failed to create render pass!")
+
+    m_device.setObjectName(VK_OBJECT_TYPE_RENDER_PASS, reinterpret_cast<uint64_t>(m_renderPass), "Swapchain RenderPass");
 }
 
 void SwapChain::createFramebuffers() {
@@ -367,6 +378,11 @@ void SwapChain::createFramebuffers() {
 
         auto result = vkCreateFramebuffer(m_device.device(), &framebufferInfo, nullptr, &m_swapChainFramebuffers[i]);
         VK_CHECK_RESULT(result, "Failed to create framebuffer!")
+
+        const std::string str = "SwapchainFrameBuffer #" + std::to_string(i);
+        m_device.setObjectName(VK_OBJECT_TYPE_FRAMEBUFFER, reinterpret_cast<uint64_t>(m_swapChainFramebuffers[i]),
+                            str.c_str());
+
     }
 }
 }  // namespace sge

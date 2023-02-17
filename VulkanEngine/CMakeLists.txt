@@ -24,6 +24,8 @@ set(CORE_INCLUDES
 	includes/Shader.h
 	includes/Texture.h
 	includes/PipelineInputData.h
+	includes/RenderSystem.h
+	includes/ResourceSystem.h
 )
 set(CORE_SOURCES
 	sources/Renderer.cpp
@@ -42,6 +44,8 @@ set(CORE_SOURCES
 	sources/Shader.cpp
 	sources/Texture.cpp
 	sources/PipelineInputData.cpp
+	sources/RenderSystem.cpp
+	sources/ResourceSystem.cpp
 )
 add_library(${CORE_PROJECT_NAME} STATIC
 	${CORE_INCLUDES}
