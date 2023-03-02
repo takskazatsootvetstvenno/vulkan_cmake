@@ -6,7 +6,7 @@
 #include <array>
 #include <cassert>
 #include <vector>
-
+#include <string>
 
 namespace sge {
 class Pipeline;
@@ -103,16 +103,16 @@ class PipelineInputData final {
 
     PipelineInputData(VertexData&& vertexData, Shader&& shader, ColorBlendData&& colorBlendData,
                       VkPipelineLayout pipelineLayout, FixedFunctionsStages&& fixedFunctionStage,
-                      VkRenderPass renderPass)
+                      VkRenderPass renderPass, const std::string& name)
         : m_vertexData(std::move(vertexData)), m_shader(std::move(shader)),
           m_fixedFunctionStage(std::move(fixedFunctionStage)), m_colorBlendData(std::move(colorBlendData)),
-          m_pipelineLayout(pipelineLayout), m_renderPass(renderPass){};
+          m_pipelineLayout(pipelineLayout), m_renderPass(renderPass), m_name(name){};
 
     PipelineInputData(const VertexData& vertexData, const Shader& shader, const ColorBlendData& colorBlendData,
                       VkPipelineLayout pipelineLayout, const FixedFunctionsStages& fixedFunctionStage,
-                      VkRenderPass renderPass)
+                      VkRenderPass renderPass, const std::string& name)
         : m_vertexData(vertexData), m_shader(shader), m_fixedFunctionStage(fixedFunctionStage),
-          m_colorBlendData(colorBlendData), m_pipelineLayout(pipelineLayout), m_renderPass(renderPass){};
+          m_colorBlendData(colorBlendData), m_pipelineLayout(pipelineLayout), m_renderPass(renderPass), m_name(name){};
 
     const FixedFunctionsStages& getFixedFunctionsStages() { return m_fixedFunctionStage; }
     const VertexData& getVertexData() { return m_vertexData; }
@@ -120,6 +120,7 @@ class PipelineInputData final {
     const ColorBlendData& getColorBlendData() { return m_colorBlendData; }
     const VkPipelineLayout getPipelineLayout() { return m_pipelineLayout; }
     const VkRenderPass getRenderPass() { return m_renderPass; }
+    const std::string getName() const noexcept { return m_name; }
     void setRenderPass(const VkRenderPass renderPass) noexcept { m_renderPass = renderPass; }
     const uint32_t getSubpass() { return m_subpass; }
 
@@ -131,5 +132,6 @@ class PipelineInputData final {
     VkPipelineLayout m_pipelineLayout;
     VkRenderPass m_renderPass;
     uint32_t m_subpass = 0;
+    std::string m_name;
 };
 }  // namespace sge

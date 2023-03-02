@@ -15,7 +15,7 @@ void ResourceSystem::init(const Device* device) noexcept
 }
 
 uint32_t ResourceSystem::addFramebuffer(FrameBuffer&& framebuffer) {
-    assert(framebuffer.valid() && "FrameBuffer is not valid!");
+    //assert(framebuffer.valid() && "FrameBuffer is not valid!");
     m_frameBuffers.emplace_back(std::move(framebuffer));
 
     return static_cast<uint32_t>(m_frameBuffers.size() - 1);
@@ -38,7 +38,14 @@ const VkFramebuffer FrameBuffer::getFrameBuffer() const noexcept {
     return m_frameBuffer;
 }
 
-void FrameBuffer::create() { 
+void FrameBuffer::setDependencyStage(VkPipelineStageFlagBits pipelineStages, VkAccessFlags accessStages) {
+    assert(pipelineStages != VK_PIPELINE_STAGE_NONE && accessStages != VK_ACCESS_NONE && "Wrong setDependency!");
+    m_pipelineStages = pipelineStages;
+    m_accessStages = accessStages;
+ }
+
+void FrameBuffer::create(VkPipelineStageFlagBits inputPipelineStages, VkAccessFlags inputAccessStages,
+                          VkPipelineStageFlagBits outputPipelineStages, VkAccessFlags outputAccessStages) { 
     auto count = std::count_if(m_attachments.begin(), m_attachments.end(), [](const FrameBufferAttachment att) {
         return att.layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     });
@@ -75,19 +82,18 @@ void FrameBuffer::create() {
 
     dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
     dependencies[0].dstSubpass = 0;
-    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
+    dependencies[0].srcStageMask = inputPipelineStages;
+    dependencies[0].dstStageMask = m_pipelineStages;
+    dependencies[0].srcAccessMask = inputAccessStages;  // VK_ACCESS_SHADER_READ_BIT;
+    dependencies[0].dstAccessMask = m_accessStages;
     dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
     dependencies[1].srcSubpass = 0;
     dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    dependencies[1].srcStageMask = m_pipelineStages;
+    dependencies[1].dstStageMask = outputPipelineStages;
+    dependencies[1].srcAccessMask = m_accessStages;
+    dependencies[1].dstAccessMask = outputAccessStages;
 
     dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
     #else
@@ -138,6 +144,8 @@ void FrameBuffer::create() {
     frameBufferInfo.layers = 1;
     VK_CHECK_RESULT(vkCreateFramebuffer(m_device.device(), &frameBufferInfo, nullptr, &m_frameBuffer),
                     "RenderSystem::FrameBuffer:create: Failed to create framebuffer!");
+    m_device.setObjectName(VK_OBJECT_TYPE_RENDER_PASS, reinterpret_cast<uint64_t>(m_renderPass), m_name);
+    m_device.setObjectName(VK_OBJECT_TYPE_FRAMEBUFFER, reinterpret_cast<uint64_t>(m_frameBuffer), m_name);
     m_isCreated = true;
 }
 
@@ -161,7 +169,7 @@ uint32_t ResourceSystem::addWorkFlow(WorkFlow&& workflow) {
     return static_cast<uint32_t>(m_workFlows.size() - 1);
 }
 
-const FrameBuffer& ResourceSystem::getFrameBufferByID(uint32_t id) noexcept {
+FrameBuffer& ResourceSystem::getFrameBufferByID(uint32_t id) noexcept {
     assert(!(id >= m_frameBuffers.size()));
     return m_frameBuffers[id];
 }
@@ -271,13 +279,45 @@ void FrameBuffer::createAttachment(const VkFormat format, const VkImageUsageFlag
    m_attachments.emplace_back(newAttachment);
 }
 
-FrameBuffer::FrameBuffer(const Device& device, const uint32_t width, const uint32_t height) 
-    : m_device(device), m_width(width), m_height(height) {}
+const VkPipelineStageFlagBits FrameBuffer::getPipelineStages() const noexcept { return m_pipelineStages; }
+const VkAccessFlags FrameBuffer::getAccessStages() const noexcept { return m_accessStages; }
+
+FrameBuffer::FrameBuffer(const Device& device, const uint32_t width, const uint32_t height, const std::string& name) 
+    : m_device(device), m_width(width), m_height(height), m_name(name) {}
 
 
 const std::vector<WorkFlow::WorkFlowFrame>& WorkFlow::getFramesData() const noexcept {
+    assert(m_valid && "Workflow should be created before use!");
     return m_frames;
   }
+
+  void WorkFlow::create() { 
+    assert(!m_frames.empty());
+    auto& resource = ResourceSystem::Instance();
+
+    VkPipelineStageFlagBits previousPipelineStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT; 
+    VkAccessFlags previousAccessStage = VK_ACCESS_SHADER_READ_BIT;
+    auto firstPipelineID = m_frames[0].pipelineID;
+    VkPipelineStageFlagBits nextPipelineStage = resource.getFrameBufferByID(firstPipelineID).getPipelineStages();
+    VkAccessFlags nextAccessStage = resource.getFrameBufferByID(firstPipelineID).getAccessStages();
+    
+    for (size_t i = 0; i < m_frames.size(); ++i) { 
+        auto pipelineID = m_frames[i].pipelineID;
+        resource.getFrameBufferByID(pipelineID)
+            .create(previousPipelineStage, previousAccessStage, nextPipelineStage, nextAccessStage);
+        previousPipelineStage = resource.getFrameBufferByID(pipelineID).getPipelineStages();
+        previousAccessStage = resource.getFrameBufferByID(pipelineID).getAccessStages();
+
+        if (i < m_frames.size()) {
+            nextPipelineStage = resource.getFrameBufferByID(firstPipelineID).getPipelineStages();
+            nextAccessStage = resource.getFrameBufferByID(firstPipelineID).getAccessStages();
+        } else {
+            VkPipelineStageFlagBits previousPipelineStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+            VkAccessFlags previousAccessStage = VK_ACCESS_MEMORY_WRITE_BIT;
+        }
+    }
+        
+}
 
 uint32_t WorkFlow::addNextFrame(uint32_t pipelineID, uint32_t vertexBufferID, uint32_t indexBufferID,
     bool hasVertexBuffer, bool hasIndexBuffer) {

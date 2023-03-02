@@ -225,14 +225,16 @@ void Device::createLogicalDevice() {
 
 const VkPhysicalDeviceProperties& Device::getPhysicalDeviceProperties() const noexcept { return m_physicalProperties; }
 
-void Device::setObjectName(const VkObjectType objectType, const uint64_t objectHandle, const char* name) const {
-    if (SetDebugUtilsObjectNameEXT == nullptr) return;
+void Device::setObjectName(const VkObjectType objectType, const uint64_t objectHandle, const std::string_view name) const {
+    
+    if (SetDebugUtilsObjectNameEXT == nullptr || objectHandle == 0 || name.empty()) return;
+    
     VkDebugUtilsObjectNameInfoEXT objectInfo = {
         .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
         .pNext = nullptr,
         .objectType = objectType,
         .objectHandle = objectHandle,
-        .pObjectName = name,
+        .pObjectName = name.data(),
     };
     VK_CHECK_RESULT(SetDebugUtilsObjectNameEXT(m_device, &objectInfo), "Failed to add DebugUtilsObjectNameInfoEXT to object!");
 }

@@ -19,7 +19,6 @@ struct DescriptorSetAttachment {
 };
 
 struct PipelineDescription {
-    std::string name;
     VkPipelineLayout pipelineLayout;
     Pipeline pipeline;
     uint32_t descriptorID;
@@ -43,29 +42,35 @@ class WorkFlow
     const std::vector<WorkFlow::WorkFlowFrame>& getFramesData() const noexcept;
     void setFrameVertexBuffer(const uint32_t frameID, const uint32_t vertexBufferID) noexcept;
     void setFrameIndexBuffer(const uint32_t frameID, const uint32_t indexBufferID) noexcept;
-
+    void create();
  private:
     std::string m_name;
     std::vector<WorkFlowFrame> m_frames;
+    bool m_valid = false;
 };
 
 class FrameBuffer {
  public:
-    FrameBuffer(const Device& device, const uint32_t width, const uint32_t height);
+    FrameBuffer(const Device& device, const uint32_t width, const uint32_t height, const std::string& name = "");
     void createAttachment(const VkFormat format, const VkImageUsageFlagBits usage, const bool isDepthStencil = false) noexcept;
-
+    void setDependencyStage(VkPipelineStageFlagBits pipelineStages, VkAccessFlags accessStages);
     // Func returns ID in frameBuffer vector
-    void create();
+    void create(VkPipelineStageFlagBits inputPipelineStages, VkAccessFlags inputAccessStages,
+                VkPipelineStageFlagBits outputPipelineStages, VkAccessFlags outputAccessStages);
     bool valid() const noexcept;
     const VkRenderPass getRenderPass() const noexcept;
     const VkFramebuffer getFrameBuffer() const noexcept;
+    const VkPipelineStageFlagBits getPipelineStages() const noexcept;
+    const VkAccessFlags getAccessStages() const noexcept;
     const FrameBufferAttachment getFrameBufferAttachmentByID(const uint32_t id) const noexcept;
  private:
     uint32_t m_width, m_height;
     VkFramebuffer m_frameBuffer = nullptr;
     VkRenderPass m_renderPass = nullptr;
+    VkPipelineStageFlagBits m_pipelineStages;
+    VkAccessFlags m_accessStages;
     std::vector<FrameBufferAttachment> m_attachments;
-    std::string m_frameBufferName;
+    std::string m_name;
     const Device& m_device;
     bool m_isCreated = false;
 };
@@ -85,7 +90,7 @@ class ResourceSystem {
     uint32_t addConstantBuffer(std::unique_ptr<Buffer>&& buffer);
     uint32_t addWorkFlow(WorkFlow&& workflow);
 
-    const FrameBuffer& getFrameBufferByID(uint32_t id) noexcept;
+    FrameBuffer& getFrameBufferByID(uint32_t id) noexcept;
     const DescriptorSetAttachment& getDescriptor(uint32_t id) noexcept;
     const PipelineDescription& getPipeline(uint32_t id) noexcept;
     const Buffer& getConstantBuffer(uint32_t id) noexcept;

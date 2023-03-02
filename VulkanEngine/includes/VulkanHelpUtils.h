@@ -10,6 +10,29 @@ This file contains helpfull functions for vulkan api
 
 #include <cassert>
 
+enum class TextureFormat {
+    R8G8B8A8_UNORM = 0,
+    R8G8B8A8_SRGB,
+    R8G8_UNORM
+};
+enum class ShaderDataType {
+    INT = 0,
+    FLOAT,
+    VEC2,
+    VEC3,
+    VEC4,
+    MAT3,
+    MAT4
+};
+
+enum class PipelineDependency {
+    VERTEX_SHADER_WRITE = 0,
+    FRAGMENT_SHADER_WRITE,
+    COLOR_ATTACHMENT_WRITE,
+    DEPTH_READ,
+    DEPTH_WRITE
+};
+
 #define VK_CHECK_RESULT(result, errorText) \
     { \
         if (result != VK_SUCCESS) { \

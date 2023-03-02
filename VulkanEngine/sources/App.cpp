@@ -11,6 +11,7 @@
 #include "VulkanHelpUtils.h"
 #include "RenderSystem.h"
 #include "ResourceSystem.h"
+#include "WorkflowConfigLoader.h"
 
 #include <array>
 #include <chrono>
@@ -84,10 +85,11 @@ void App::initPipelines() {
         
         resourceSystem.addConstantBuffer(std::move(uboBuffer));
 
-        FrameBuffer firstFB(m_device, m_window.getExtent().width, m_window.getExtent().height);
+        FrameBuffer firstFB(m_device, m_window.getExtent().width, m_window.getExtent().height, "Phong first stage");
         firstFB.createAttachment(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
         firstFB.createAttachment(depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, true);
-        firstFB.create();
+        firstFB.setDependencyStage(VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT);
+        //firstFB.create();
 
         auto framebufferID = resourceSystem.addFramebuffer(std::move(firstFB));
         auto renderPass = resourceSystem.getFrameBufferByID(framebufferID).getRenderPass();
@@ -108,13 +110,13 @@ void App::initPipelines() {
             colorBlendData,
             pipelineLayout,
             fixedFunctionStages, 
-            renderPass
+            renderPass,
+            "Phong first stage"
         };
 
         auto descriptorID = resourceSystem.addDescriptor({.layout = std::move(descriptorLayout), .set = descriptorSet});
 
         auto pipelineID = resourceSystem.addPipeline({
-            .name = "Phong first stage pipeline",
             .pipelineLayout = pipelineLayout,
             .pipeline = Pipeline(m_device, std::move(pipeline_data)),
             .descriptorID = descriptorID,
@@ -123,9 +125,10 @@ void App::initPipelines() {
         simple_workflow.addNextFrame(pipelineID, 0, 0, true, true); //check VB/IB
     }
     { //For Pipeline 1 - Negative screen
-        FrameBuffer finalFB(m_device, m_window.getExtent().width, m_window.getExtent().height);
+        FrameBuffer finalFB(m_device, m_window.getExtent().width, m_window.getExtent().height, "Negative second stage");
         finalFB.createAttachment(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, false);
-        finalFB.create();
+        finalFB.setDependencyStage(VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT);
+        //finalFB.create();
         auto framebufferID = resourceSystem.addFramebuffer(std::move(finalFB));
         auto renderPass = resourceSystem.getFrameBufferByID(framebufferID).getRenderPass();
 
@@ -155,13 +158,12 @@ void App::initPipelines() {
 
         PipelineInputData pipeline_data{
             vertexData,     glslNegativeShader,  colorBlendData,
-            pipelineLayout, fixedFunctionStages, renderPass};
+            pipelineLayout, fixedFunctionStages, renderPass, "Negative second stage"};
 
         auto descriptorID = resourceSystem.addDescriptor({.layout = std::move(descriptorLayout), .set = descriptorSet});
 
         auto pipelineID = resourceSystem.addPipeline(
             {
-                .name = "Negative second stage pipeline",
                 .pipelineLayout = pipelineLayout,
                 .pipeline = Pipeline(m_device, std::move(pipeline_data)),
                 .descriptorID = descriptorID,
@@ -196,24 +198,25 @@ void App::initPipelines() {
                                   "data/Shaders/GLSL/Fullscreen/Fullscreen.frag");
 
         auto renderPass = m_renderer.getSwapChainRenderPass();
-        PipelineInputData pipeline_data{vertexData,     glslFullscreenShader, colorBlendData,
-                                        pipelineLayout, fixedFunctionStages, renderPass};
+        PipelineInputData pipeline_data{vertexData,          glslFullscreenShader, colorBlendData,   pipelineLayout,
+                                        fixedFunctionStages, renderPass,           "Swapchain third stage"};
 
         auto descriptorID = resourceSystem.addDescriptor({.layout = std::move(descriptorLayout), .set = descriptorSet});
 
-        auto pipelineID = resourceSystem.addPipeline({.name = "Swapchain stage",
-                                                      .pipelineLayout = pipelineLayout,
+        auto pipelineID = resourceSystem.addPipeline({.pipelineLayout = pipelineLayout,
                                                       .pipeline = Pipeline(m_device, std::move(pipeline_data)),
                                                       .descriptorID = descriptorID,
                                                       .framebufferID = 0});
         simple_workflow.addNextFrame(pipelineID, 0, 0, false, false);  // TO DO check VB/IB
     }
+    simple_workflow.create();
     resourceSystem.addWorkFlow(std::move(simple_workflow));
 }
 
 App::App(glm::ivec2 windowSize, std::string windowName) : m_window(windowSize.x, windowSize.y, std::move(windowName)) {
     initEvents();
-
+    auto& config = ConfigLoader::Instance();
+    config.loadAndParseConfigs();
 
     m_camera.setViewCircleCamera(-15.f, 5.f);
     m_camera.setPerspectiveProjection(glm::radians(m_camera.getZoom()), static_cast<float>(windowSize.x) / windowSize.y,
@@ -866,7 +869,8 @@ void App::createPipeline(const VkDescriptorSetLayout descriptorSetLayout, std::u
         colorBlendData,
         pipelineLayout,
         fixedFunctionStages,
-        renderPass
+        renderPass,
+        "User_Pipeline"
     };
     pipeline = std::make_unique<Pipeline>(m_device, std::move(pipeline_data));
 }
@@ -886,7 +890,8 @@ void App::createPipeline(const VkPipelineLayout pipelineLayout, std::unique_ptr<
         colorBlendData,
         pipelineLayout,
         fixedFunctionStages,
-        renderPass
+        renderPass,
+        "User_Pipeline"
     };
     pipeline = std::make_unique<Pipeline>(m_device, std::move(pipeline_data));
 }

@@ -32,6 +32,7 @@ class Pipeline {
     ~Pipeline();
 
     const Shader& getShader() noexcept;
+    const std::string& getName() const noexcept;
     void crateGraphicsPipeline();
     void bind(VkCommandBuffer commandBuffer) const noexcept;
     //static PipelineConfigInfo createDefaultPipeline(uint32_t width, uint32_t height, FixedPipelineStates states);

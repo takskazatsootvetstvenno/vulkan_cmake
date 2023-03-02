@@ -22,10 +22,16 @@ void Pipeline::crateGraphicsPipeline() {
                                                                                       std::vector<uint32_t>();
 
     VkShaderModule vertShaderModule = createShaderModule(vertCode);
+    m_device.setObjectName(VK_OBJECT_TYPE_SHADER_MODULE, reinterpret_cast<uint64_t>(vertShaderModule),
+                           m_pipelineData.getName() + " vertex");
     VkShaderModule fragShaderModule = createShaderModule(fragCode);
+    m_device.setObjectName(VK_OBJECT_TYPE_SHADER_MODULE, reinterpret_cast<uint64_t>(fragShaderModule),
+                           m_pipelineData.getName() + " fragment");
     VkShaderModule geomShaderModule = m_pipelineData.getShader().isGeometryShaderPresent() ?
                                           createShaderModule(geometryCode) :
                                           VkShaderModule{};
+    m_device.setObjectName(VK_OBJECT_TYPE_SHADER_MODULE, reinterpret_cast<uint64_t>(geomShaderModule),
+                           m_pipelineData.getName() + " geometry");
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -159,6 +165,8 @@ void Pipeline::crateGraphicsPipeline() {
     vkDestroyShaderModule(m_device.device(), fragShaderModule, nullptr);
     if (m_pipelineData.getShader().isGeometryShaderPresent())
         vkDestroyShaderModule(m_device.device(), geomShaderModule, nullptr);
+    m_device.setObjectName(VK_OBJECT_TYPE_PIPELINE, reinterpret_cast<uint64_t>(m_graphicsPipeline),
+                           m_pipelineData.getName());
 }
 
 void Pipeline::bind(VkCommandBuffer commandBuffer) const noexcept {
@@ -219,6 +227,8 @@ bool Pipeline::recreatePipelineShaders(const VkRenderPass renderPass) {
     }
     return true;
 }
+
+const std::string& Pipeline::getName() const noexcept { return m_pipelineData.getName(); }
 
 VkShaderModule Pipeline::createShaderModule(const std::vector<uint32_t>& code) {
     VkShaderModuleCreateInfo createInfo{};

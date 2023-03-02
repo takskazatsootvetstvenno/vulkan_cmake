@@ -26,6 +26,8 @@ set(CORE_INCLUDES
 	includes/PipelineInputData.h
 	includes/RenderSystem.h
 	includes/ResourceSystem.h
+	includes/WorkflowConfigLoader.h
+	includes/json.hpp
 )
 set(CORE_SOURCES
 	sources/Renderer.cpp
@@ -46,6 +48,7 @@ set(CORE_SOURCES
 	sources/PipelineInputData.cpp
 	sources/RenderSystem.cpp
 	sources/ResourceSystem.cpp
+	sources/WorkflowConfigLoader.cpp
 )
 add_library(${CORE_PROJECT_NAME} STATIC
 	${CORE_INCLUDES}

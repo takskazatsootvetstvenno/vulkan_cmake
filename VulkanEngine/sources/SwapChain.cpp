@@ -166,7 +166,7 @@ void SwapChain::createSwapChain() {
 
     for (int i = 0; i < m_swapChainImages.size(); ++i) {
         std::string str = "SwapchainImage #" + std::to_string(i);
-        m_device.setObjectName(VK_OBJECT_TYPE_IMAGE, reinterpret_cast<uint64_t>(m_swapChainImages[i]), str.c_str());
+        m_device.setObjectName(VK_OBJECT_TYPE_IMAGE, reinterpret_cast<uint64_t>(m_swapChainImages[i]), str);
     }
 }
 
@@ -176,7 +176,7 @@ void SwapChain::createImageViews() {
         m_swapChainImageViews[i] = m_device.createImageView(m_swapChainImages[i], m_swapChainImageFormat);
         std::string str = "SwapchainImageView #" + std::to_string(i); 
         m_device.setObjectName(VK_OBJECT_TYPE_IMAGE_VIEW, reinterpret_cast<uint64_t>(m_swapChainImageViews[i]),
-                               str.c_str());
+                               str);
     }
 }
 
@@ -381,7 +381,7 @@ void SwapChain::createFramebuffers() {
 
         const std::string str = "SwapchainFrameBuffer #" + std::to_string(i);
         m_device.setObjectName(VK_OBJECT_TYPE_FRAMEBUFFER, reinterpret_cast<uint64_t>(m_swapChainFramebuffers[i]),
-                            str.c_str());
+                            str);
 
     }
 }
